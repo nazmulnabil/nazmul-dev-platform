@@ -1,0 +1,251 @@
+# =============================================================================
+# UI Spec Template — Frontend / User Interface
+# =============================================================================
+# This YAML file is the machine-parsable source of truth for a UI feature.
+# Agents read this to implement frontend code (React components, pages, flows).
+# Paired with the human-readable README.md in the same directory.
+# =============================================================================
+
+spec:
+  # ── Metadata ──────────────────────────────────────────────────────────────
+  name: feature-name                 # kebab-case, e.g. "login-page"
+  domain: auth                       # domain group, e.g. "auth", "catalog", "cart"
+  type: ui                           # api | ui | event | integration
+  version: 1.0.0                     # semver
+  status: draft                      # draft | approved | implemented | deprecated
+  last_updated: 2026-05-27
+
+  # ── Overview ──────────────────────────────────────────────────────────────
+  description: >
+    Brief description of what this UI feature does and the user goal it serves.
+
+  scope:
+    in:
+      - What pages/components are included
+    out:
+      - What is explicitly excluded
+
+  # ── Route / Entry Point ───────────────────────────────────────────────────
+  page:
+    route: /login                    # React Router path
+    layout: public                   # public | authenticated | admin
+    title: Sign In                   # Page title / document title
+    description: Login page for registered users
+
+  # ── Components ────────────────────────────────────────────────────────────
+  components:
+    - name: LoginForm
+      type: form                     # form | list | detail | modal | card | layout
+      description: Email and password login form
+      props:
+        - name: onSubmit
+          type: function
+          required: true
+          description: Called with { email, password } on valid submit
+
+      state: controlled              # controlled | uncontrolled | server-driven
+
+      fields:
+        - name: email
+          label: Email Address
+          type: email                # text | email | password | number | select | textarea | file
+          placeholder: "you@example.com"
+          required: true
+          validation:
+            - rule: required
+              message: "Email is required"
+            - rule: email
+              message: "Enter a valid email address"
+          auto_complete: email
+
+        - name: password
+          label: Password
+          type: password
+          placeholder: "Enter your password"
+          required: true
+          validation:
+            - rule: required
+              message: "Password is required"
+          auto_complete: current-password
+
+      actions:
+        - label: Sign In
+          type: submit
+          variant: primary           # primary | secondary | danger | ghost
+          full_width: true
+          on_click:
+            api: POST /api/v1/auth/login/
+            ref: auth-api.spec.yaml  # reference to the API spec
+            request_mapping:
+              email: form.email
+              password: form.password
+            response_mapping:
+              on_success: redirect to /
+              on_error: show inline error on form
+
+    - name: SocialLoginSection       # optional, example
+      type: card
+      description: Social login options (future)
+      show_when: false               # feature flag / conditional render
+
+  # ── UI States ─────────────────────────────────────────────────────────────
+  states:
+    - name: idle
+      description: Initial form state, all fields empty
+      components:
+        - LoginForm: enabled, empty
+    - name: validating
+      description: User is typing, inline validation running
+      triggers: [on_change, on_blur]
+    - name: submitting
+      description: Form submitted, waiting for API response
+      components:
+        - LoginForm: all fields disabled, button shows spinner
+    - name: error
+      description: API returned an error
+      components:
+        - LoginForm: error alert shown above form, fields remain filled
+    - name: success
+      description: Login successful, redirecting
+      components:
+        - LoginForm: brief success indicator, then redirect
+
+  # ── API Dependencies ─────────────────────────────────────────────────────
+  api_dependencies:
+    - ref: auth-api.spec.yaml        # reference to the API spec file
+      endpoints:
+        - POST /api/v1/auth/login/
+        - POST /api/v1/auth/token/refresh/
+
+  # ── Error Handling ────────────────────────────────────────────────────────
+  error_handling:
+    - scenario: Invalid credentials
+      api_error: InvalidCredentialsError
+      http_status: 401
+      ui_response:
+        type: inline                  # inline | toast | modal | banner
+        location: above_form          # where the error appears
+        message: "Invalid email or password. Please try again."
+        action: highlight email field
+    - scenario: Network failure
+      api_error: NetworkError
+      http_status: 0
+      ui_response:
+        type: toast
+        message: "Connection failed. Check your internet and try again."
+        action: enable retry button
+        duration: 5000               # ms before auto-dismiss
+
+  # ── Loading / Empty / Error States ────────────────────────────────────────
+  loading:
+    type: skeleton                   # skeleton | spinner | shimmer
+    components:
+      - LoginForm: skeleton matching form field dimensions
+
+  empty_state:
+    description: N/A — form pages don't have empty states
+
+  error_boundary:
+    fallback: "Something went wrong. Please refresh the page."
+    action: refresh button
+
+  # ── Responsive Behavior ───────────────────────────────────────────────────
+  responsive:
+    mobile:
+      layout: single_column
+      breakpoint: 640px
+    tablet:
+      layout: single_column_centered
+      breakpoint: 1024px
+    desktop:
+      layout: centered_card
+      max_width: 480px
+
+  # ── Accessibility ─────────────────────────────────────────────────────────
+  accessibility:
+    aria_labels:
+      - component: LoginForm
+        label: "Login form"
+      - component: email
+        label: "Email address input"
+    keyboard_navigation:
+      - Tab through fields in logical order
+      - Enter submits form
+      - Escape clears current field
+    focus_management:
+      on_error: focus first invalid field
+      on_success: redirect (focus moves to new page)
+
+  # ── Analytics / Events ────────────────────────────────────────────────────
+  analytics:
+    - event: login_attempt
+      trigger: form submit
+      properties:
+        - name: method
+          value: email_password
+    - event: login_success
+      trigger: API returns 200
+    - event: login_failure
+      trigger: API returns error
+      properties:
+        - name: error_code
+          value: api.error_code
+
+  # ── Testing Scenarios ─────────────────────────────────────────────────────
+  testing:
+    unit:
+      - scenario: "Form renders all fields"
+        assert: email input, password input, submit button present
+      - scenario: "Validation fires on empty submit"
+        action: click submit with empty fields
+        assert: error messages shown for email and password
+      - scenario: "Invalid email format"
+        action: type "notanemail" in email, click submit
+        assert: "Enter a valid email address" message shown
+    integration:
+      - scenario: "Successful login"
+        action: fill valid credentials, click submit
+        assert: button shows loading, then redirects to /
+      - scenario: "Failed login — wrong credentials"
+        action: fill invalid credentials, click submit
+        assert: "Invalid email or password" error shown inline
+      - scenario: "Network error on login"
+        action: simulate offline, click submit
+        assert: "Connection failed" toast appears
+    e2e:
+      - scenario: "Full login flow"
+        steps:
+          - Navigate to /login
+          - Fill email and password
+          - Click Sign In
+          - Assert redirected to /
+          - Assert user name appears in header
+
+  # ── Dependencies ──────────────────────────────────────────────────────────
+  dependencies:
+    components:
+      - name: Button
+        source: design-system/button
+      - name: Input
+        source: design-system/input
+    libraries:
+      - name: react-router-dom
+        version: "^7"
+        purpose: routing and redirects
+      - name: axios
+        version: "^1"
+        purpose: API client
+
+  # ── Feature Flags ─────────────────────────────────────────────────────────
+  feature_flags:
+    - flag: social_login_enabled
+      default: false
+      description: Show/hide social login buttons
+
+  # ── Changelog ─────────────────────────────────────────────────────────────
+  changelog:
+    - version: 1.0.0
+      date: 2026-05-27
+      author: ""
+      changes:
+        - "Initial spec"
