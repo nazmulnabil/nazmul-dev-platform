@@ -1,0 +1,3 @@
+[submodule "django-ecommerce-api"]
+	path = django-ecommerce-api
+	url = https://github.com/nazmulnabil/django-ecommerce-api.git
