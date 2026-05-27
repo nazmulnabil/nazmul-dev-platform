@@ -1,0 +1,232 @@
+# =============================================================================
+# API Spec Template — Backend / API Contract
+# =============================================================================
+# This YAML file is the machine-parsable source of truth for an API feature.
+# Agents read this to implement backend code.
+# Paired with the human-readable README.md in the same directory.
+# =============================================================================
+
+spec:
+  # ── Metadata ──────────────────────────────────────────────────────────────
+  name: feature-name                 # kebab-case, e.g. "auth-registration"
+  domain: auth                       # domain group, e.g. "auth", "catalog", "cart"
+  type: api                          # api | ui | event | integration
+  version: 1.0.0                     # semver
+  status: draft                      # draft | approved | implemented | deprecated
+  last_updated: 2026-05-27
+
+  # ── Overview ──────────────────────────────────────────────────────────────
+  description: >
+    Brief description of what this feature does and why it exists.
+
+  scope:
+    in:
+      - What is included
+    out:
+      - What is explicitly excluded
+
+  # ── Data Model ────────────────────────────────────────────────────────────
+  entities:
+    - name: EntityName               # PascalCase model name
+      table: app_entityname          # actual database table name
+      description: What this entity represents
+      fields:
+        - name: field_name
+          type: string               # string | integer | decimal | boolean | datetime | json | image | file | fk | o2o | m2m
+          max_length: 255            # if applicable
+          format: email              # email | slug | uuid | uri | date-time
+          constraints:
+            - required
+            - unique
+            - min_length: 8
+            - max_length: 150
+            - min_value: 0
+            - max_value: 999999
+          default: null
+          nullable: true
+          normalization: lowercase   # lowercase | uppercase | trim | slugify | none
+          notes: Additional context
+      relationships:
+        - type: fk                   # fk | o2o | m2m
+          from: field_name
+          to: OtherEntity
+          on_delete: cascade         # cascade | protect | set_null
+          related_name: other_entities
+      indexes:
+        - fields: [field_a, field_b]
+          unique: true
+          condition: is_active=True
+      state_machine:                 # if entity has lifecycle states
+        states:
+          - draft
+          - active
+          - archived
+        transitions:
+          - from: draft
+            to: active
+            trigger: publish
+          - from: active
+            to: archived
+            trigger: archive
+
+  # ── API Endpoints ─────────────────────────────────────────────────────────
+  endpoints:
+    - path: /api/v1/domain/action/   # full URL path
+      method: POST                   # GET | POST | PUT | PATCH | DELETE
+      auth: false                    # true | false
+      permission: AllowAny           # AllowAny | IsAuthenticated | IsAdminUser | CustomPermission
+      summary: What this endpoint does
+      deprecated: false
+
+      # Request schema
+      request:
+        serializer: ActionInputSerializer   # Django DRF serializer name
+        content_type: application/json
+        description: Description of request body
+        fields:
+          - name: field_name
+            type: string
+            required: true
+            constraints:
+              - min_length: 1
+              - max_length: 255
+            example: "sample value"
+          - name: optional_field
+            type: integer
+            required: false
+            default: 0
+            constraints:
+              - min_value: 0
+            example: 42
+        multipart_fields: []         # list of field names if file upload
+
+      # Response schema
+      response:
+        serializer: ActionOutputSerializer
+        description: Description of response body
+        fields:
+          - name: id
+            type: integer
+            example: 1
+          - name: nested
+            type: object
+            fields:
+              - name: key
+                type: string
+                example: "value"
+          - name: items
+            type: array
+            of:
+              type: object
+              fields:
+                - name: item_id
+                  type: integer
+
+      # Status codes
+      status_codes:
+        - code: 201
+          description: Created successfully
+        - code: 400
+          description: Validation error
+        - code: 409
+          description: Conflict (e.g. duplicate)
+          exception: DomainErrorName
+
+      # Query parameters (for GET endpoints)
+      query_parameters:
+        - name: page
+          type: integer
+          required: false
+          default: 1
+        - name: page_size
+          type: integer
+          required: false
+          default: 20
+        - name: search
+          type: string
+          required: false
+        - name: ordering
+          type: string
+          required: false
+          enum: [created_at, -created_at, price, -price]
+
+  # ── Business Rules ────────────────────────────────────────────────────────
+  business_rules:
+    - id: BR-001
+      description: "Rule description"
+      enforcement: service | serializer | model | db
+      location: app/services.py:function_name   # file:line or function reference
+      error: ExceptionName
+      http_status: 409
+
+  # ── Exceptions ────────────────────────────────────────────────────────────
+  exceptions:
+    - name: ExceptionName            # must match class name in exceptions.py
+      http_status: 409
+      message: "Default error message"
+      inherits: DomainException
+      trigger: Condition that raises this error
+
+  # ── Authorization / Permissions ───────────────────────────────────────────
+  authorization:
+    default: IsAuthenticated         # default DRF permission class
+    overrides:
+      - endpoint: POST /action/
+        permission: AllowAny
+      - endpoint: GET /admin/
+        permission: IsAdminUser
+    roles:                           # RBAC if applicable
+      - name: admin
+        permissions:
+          - full_access
+      - name: manager
+        permissions:
+          - read_products
+          - write_products
+
+  # ── External Dependencies ─────────────────────────────────────────────────
+  dependencies:
+    services:
+      - name: Service Name
+        type: internal | external
+        contract: path/to/contract.yaml
+    libraries:
+      - name: library-name
+        version: ">=1.0"
+        purpose: What it's used for
+
+  # ── Event Contracts (if event-driven) ─────────────────────────────────────
+  events:
+    publishes:
+      - name: entity.created
+        schema:
+          type: object
+          fields:
+            - name: entity_id
+              type: integer
+    subscribes:
+      - name: other.entity.updated
+
+  # ── Testing ───────────────────────────────────────────────────────────────
+  testing:
+    unit:
+      - scenario: "Description of test scenario"
+        input: { key: value }
+        expected: { key: expected_value }
+        exception: null             # or ExceptionName
+    integration:
+      - scenario: "API test description"
+        method: POST
+        path: /api/v1/domain/action/
+        auth: false
+        body: { field: "value" }
+        expected_status: 201
+        expected_body: { key: "expected" }
+
+  # ── Change Log ────────────────────────────────────────────────────────────
+  changelog:
+    - version: 1.0.0
+      date: 2026-05-27
+      author: ""
+      changes:
+        - "Initial spec"
