@@ -1,0 +1,318 @@
+# =============================================================================
+# Products API Spec (Service/Selector Layer)
+# =============================================================================
+spec:
+  name: catalog-products
+  domain: catalog
+  type: api
+  version: 1.0.0
+  status: implemented
+  last_updated: 2026-05-28
+
+  description: >
+    Sellers, products with variants and attribute-based deduplication.
+    Only internal service/selector layer is implemented (no views yet).
+
+  scope:
+    in:
+      - Create seller profile (one per user)
+      - Create product with slug generation + collision retry
+      - Update product (name, description, brand, is_active, category)
+      - Deactivate product
+      - Create variant with SKU uniqueness and attribute hash dedup
+      - List products with filtering (category, brand, price, search, in-stock)
+      - Get product by slug (with prefetched images and variants)
+      - Get products by seller
+    out:
+      - Product image upload
+      - Category update/delete
+      - Product delete
+      - Variant update/delete
+      - API views
+
+  entities:
+    - name: Seller
+      table: catalog_seller
+      description: Seller profile linked one-to-one with a user
+      fields:
+        - name: id
+          type: integer
+        - name: user
+          type: o2o
+          fk_target: User
+          on_delete: cascade
+          related_name: seller_profile
+          constraints: [required]
+        - name: store_name
+          type: string
+          max_length: 255
+          constraints: [required]
+        - name: is_verified
+          type: boolean
+          default: false
+        - name: rating
+          type: decimal
+          precision: 3
+          scale: 2
+          default: 0.00
+          constraints:
+            - min_value: 0
+      relationships:
+        - type: o2o
+          from: user
+          to: User
+          on_delete: cascade
+
+    - name: Product
+      table: catalog_product
+      description: Product listing under a seller and category
+      fields:
+        - name: id
+          type: integer
+        - name: seller
+          type: fk
+          fk_target: Seller
+          on_delete: protect
+          related_name: products
+          constraints: [required]
+        - name: category
+          type: fk
+          fk_target: Category
+          on_delete: protect
+          related_name: products
+          constraints: [required]
+        - name: name
+          type: string
+          max_length: 500
+          constraints: [required]
+        - name: slug
+          type: string
+          format: slug
+          constraints: [required, unique]
+        - name: description
+          type: string
+          constraints: [required]
+        - name: brand
+          type: string
+          max_length: 255
+          required: false
+        - name: is_active
+          type: boolean
+          default: true
+        - name: created_at
+          type: datetime
+          auto: now_add
+        - name: updated_at
+          type: datetime
+          auto: now
+      indexes:
+        - fields: [category]
+          condition: is_active=True
+          name: idx_product_active_category
+        - fields: [seller]
+          condition: is_active=True
+          name: idx_product_active_seller
+        - fields: [brand]
+          condition: is_active=True
+          name: idx_product_active_brand
+      relationships:
+        - type: fk
+          from: seller
+          to: Seller
+          on_delete: protect
+        - type: fk
+          from: category
+          to: Category
+          on_delete: protect
+
+    - name: ProductImage
+      table: catalog_productimage
+      description: Product images with primary flag and ordering
+      fields:
+        - name: id
+          type: integer
+        - name: product
+          type: fk
+          fk_target: Product
+          on_delete: cascade
+          related_name: images
+        - name: image
+          type: image
+          upload_to: products/
+          constraints: [required]
+        - name: is_primary
+          type: boolean
+          default: false
+        - name: order
+          type: integer
+          default: 0
+
+    - name: AttributeKey
+      table: catalog_attributekey
+      description: Normalized attribute key names (case-insensitive unique)
+      fields:
+        - name: id
+          type: integer
+        - name: name
+          type: string
+          max_length: 100
+          constraints: [required]
+          normalization: lowercase+strip
+      constraints:
+        - type: unique
+          fields: [Lower('name')]
+          name: unique_attributekey_name_ci
+
+    - name: ProductVariant
+      table: catalog_productvariant
+      description: SKU-level product variant with attribute hash for dedup
+      fields:
+        - name: id
+          type: integer
+        - name: product
+          type: fk
+          fk_target: Product
+          on_delete: cascade
+          related_name: variants
+        - name: sku
+          type: string
+          max_length: 100
+          constraints: [required, unique]
+        - name: price
+          type: decimal
+          precision: 12
+          scale: 2
+          constraints:
+            - required
+            - min_value: 0
+        - name: attribute_hash
+          type: string
+          max_length: 64
+          default: SHA256("__empty__")
+      indexes:
+        - fields: [product, price]
+        - fields: [product, attribute_hash]
+          name: idx_variant_product_hash
+      constraints:
+        - type: unique
+          fields: [product, attribute_hash]
+          name: unique_variant_per_product
+      relationships:
+        - type: fk
+          from: product
+          to: Product
+          on_delete: cascade
+
+    - name: VariantAttribute
+      table: catalog_variantattribute
+      description: Key-value attribute pairs for a variant
+      fields:
+        - name: id
+          type: integer
+        - name: variant
+          type: fk
+          fk_target: ProductVariant
+          on_delete: cascade
+          related_name: attributes
+        - name: key
+          type: fk
+          fk_target: AttributeKey
+          on_delete: protect
+          related_name: values
+        - name: value
+          type: string
+          max_length: 255
+          constraints: [required]
+      constraints:
+        - type: unique
+          fields: [variant, key]
+          name: unique_attribute_per_variant
+
+  endpoints: []
+
+  business_rules:
+    - id: BR-001
+      description: One seller profile per user
+      enforcement: service
+      location: catalog/services.py:create_seller
+      error: SellerAlreadyExistsError
+
+    - id: BR-002
+      description: Product slug auto-generated from name with up to 5 collision retries using UUID suffix
+      enforcement: service
+      location: catalog/services.py:create_product
+
+    - id: BR-003
+      description: Variant SKU must be unique globally
+      enforcement: model (unique=True) + service
+      location: catalog/services.py:create_variant
+      error: DuplicateSkuError
+
+    - id: BR-004
+      description: Variant attribute combination must be unique per product (via attribute_hash)
+      enforcement: model constraint + service
+      location: catalog/services.py:create_variant
+      error: DuplicateVariantError
+
+    - id: BR-005
+      description: Variant price cannot be negative
+      enforcement: service
+      location: catalog/services.py:create_variant
+      error: ValueError
+
+    - id: BR-006
+      description: Attribute names and values are normalized to lowercase+strip
+      enforcement: service
+      location: catalog/services.py:_normalize_attributes
+
+    - id: BR-007
+      description: Products filtered by active status, category slug, brand, price range, search, in-stock
+      enforcement: selector
+      location: catalog/selectors.py:get_products
+
+  exceptions:
+    - name: SellerAlreadyExistsError
+      http_status: 409
+      message: "User {email} already has a seller profile."
+      inherits: DomainException
+    - name: DuplicateSkuError
+      http_status: 409
+      message: "SKU '{sku}' is already in use."
+      inherits: DomainException
+    - name: DuplicateVariantError
+      http_status: 409
+      message: "A variant with this attribute combination already exists for '{product.name}'."
+      inherits: DomainException
+    - name: CategoryNotFoundError
+      http_status: 404
+      inherits: DomainException
+    - name: ProductNotFoundError
+      http_status: 404
+      inherits: DomainException
+
+  authorization:
+    default: IsAuthenticated
+
+  testing:
+    unit:
+      - scenario: "Create seller for user"
+        input: { user: user, store_name: "My Store" }
+        expected: Seller created
+      - scenario: "Create duplicate seller raises error"
+        input: { user: user_with_seller, store_name: "Another" }
+        exception: SellerAlreadyExistsError
+      - scenario: "Create variant with attributes generates correct hash"
+        input: { product: p, sku: "SKU1", price: 10, attributes: { "Color": "Red", "Size": "M" } }
+        expected: variant.attribute_hash == SHA256("color=red&size=m")
+      - scenario: "Create variant with duplicate attributes raises error"
+        exception: DuplicateVariantError
+      - scenario: "List products filters by category slug"
+        input: { category_slug: "electronics" }
+        expected: Only products in that category
+
+  changelog:
+    - version: 1.0.0
+      date: 2026-05-28
+      author: ""
+      changes:
+        - "Initial spec (backfilled from implementation)"
