@@ -104,21 +104,9 @@ Simple and pragmatic for solo/small-team development:
 feature/* → PR → main
 ```
 
-Docker release tags for deployment: `git tag prod-v1.0.0` → pushed → deployed.
+Release tags for deployment: `git tag prod-v1.0.0` → pushed → deployed.
 
 See `@agents/git-workflow.md` for full conventions (branch naming, commit format, PRs, conflict resolution).
-
----
-
-## Deployment
-
-| Stage | Status | Stack |
-|-------|--------|-------|
-| Local dev | ✅ Running | Django dev server, PostgreSQL, Docker Compose |
-| Production | 🔜 Planning | Docker Compose on VPS, PostgreSQL, Gunicorn + Nginx |
-| Scale | 🔜 Future | Load balancer, multiple app nodes, managed DB |
-
-Docker Compose is the deployment unit — backend, frontend, database all defined in `docker-compose.yml`.
 
 ---
 
@@ -139,9 +127,6 @@ python manage.py runserver
 
 # Tests
 pytest
-
-# Or with Docker
-docker compose up
 ```
 
 ---
