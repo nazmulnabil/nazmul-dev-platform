@@ -7,6 +7,9 @@
 | Run tests | `pytest` |
 | Run linter | `ruff check .` |
 | Generate OpenAPI schema | `python manage.py spectacular --file schema.yaml` |
+| Start Docker | `docker compose up` (from project root) |
+| Build Docker | `docker compose build` (from project root) |
+| Tag release | `git tag prod-v1.0.0 && git push origin prod-v1.0.0` |
 
 ## Decisions Log
 
