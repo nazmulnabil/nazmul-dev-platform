@@ -1,0 +1,332 @@
+# =============================================================================
+# Users API Spec — Profile & Address Management
+# =============================================================================
+spec:
+  name: users-profile-address
+  domain: users
+  type: api
+  version: 1.0.0
+  status: implemented
+  last_updated: 2026-05-28
+
+  description: >
+    Authenticated user profile management (view/update) and address CRUD.
+    Addresses are scoped per user with default-address semantics.
+
+  scope:
+    in:
+      - Get own user profile
+      - Update profile (phone, username)
+      - List own addresses
+      - Create address (with optional is_default)
+      - Set address as default
+      - Delete address
+    out:
+      - Profile picture upload
+      - Admin user management
+      - Bulk address operations
+
+  entities:
+    - name: Address
+      table: users_address
+      description: User delivery address
+      fields:
+        - name: id
+          type: integer
+          constraints: [required]
+        - name: user
+          type: fk
+          fk_target: User
+          on_delete: cascade
+          related_name: addresses
+          constraints: [required]
+        - name: label
+          type: string
+          max_length: 50
+          constraints: [required]
+          example: "Home"
+        - name: street
+          type: string
+          constraints: [required]
+          example: "123 Main St"
+        - name: city
+          type: string
+          max_length: 100
+          constraints: [required]
+        - name: country
+          type: string
+          max_length: 100
+          constraints: [required]
+        - name: postal_code
+          type: string
+          max_length: 20
+          constraints: [required]
+        - name: is_default
+          type: boolean
+          default: false
+        - name: created_at
+          type: datetime
+          auto: now_add
+        - name: updated_at
+          type: datetime
+          auto: now
+      relationships:
+        - type: fk
+          from: user
+          to: User
+          on_delete: cascade
+          related_name: addresses
+
+  endpoints:
+    - path: /api/v1/auth/users/me/
+      method: GET
+      auth: true
+      permission: IsAuthenticated
+      summary: Get the authenticated user's profile
+
+      response:
+        serializer: UserOutputSerializer
+        description: Current user profile with addresses
+        fields:
+          - name: id
+            type: integer
+          - name: email
+            type: string
+          - name: username
+            type: string
+          - name: phone
+            type: string
+            nullable: true
+          - name: profile_picture
+            type: string
+            nullable: true
+          - name: addresses
+            type: array
+            of:
+              type: object
+              fields:
+                - name: id
+                  type: integer
+                - name: label
+                  type: string
+                - name: street
+                  type: string
+                - name: city
+                  type: string
+                - name: country
+                  type: string
+                - name: postal_code
+                  type: string
+                - name: is_default
+                  type: boolean
+
+      status_codes:
+        - code: 200
+          description: Profile returned
+        - code: 401
+          description: Missing or invalid JWT
+
+    - path: /api/v1/auth/users/me/
+      method: PATCH
+      auth: true
+      permission: IsAuthenticated
+      summary: Update the authenticated user's profile
+
+      request:
+        serializer: UserProfileUpdateInputSerializer
+        fields:
+          - name: phone
+            type: string
+            required: false
+            constraints:
+              - max_length: 20
+            example: "+8801234567890"
+          - name: username
+            type: string
+            required: false
+            constraints:
+              - max_length: 150
+            example: "newname"
+
+      response:
+        serializer: UserOutputSerializer
+        description: Updated user profile
+
+      status_codes:
+        - code: 200
+          description: Profile updated
+        - code: 400
+          description: Validation error
+        - code: 401
+          description: Missing or invalid JWT
+
+    - path: /api/v1/auth/users/me/addresses/
+      method: GET
+      auth: true
+      permission: IsAuthenticated
+      summary: List all addresses for the authenticated user
+
+      response:
+        serializer: AddressOutputSerializer
+        is_array: true
+        description: List of addresses, defaults first
+
+      status_codes:
+        - code: 200
+          description: Address list
+        - code: 401
+          description: Unauthorized
+
+    - path: /api/v1/auth/users/me/addresses/
+      method: POST
+      auth: true
+      permission: IsAuthenticated
+      summary: Create a new address
+
+      request:
+        serializer: AddressInputSerializer
+        fields:
+          - name: label
+            type: string
+            max_length: 50
+            required: true
+            example: "Home"
+          - name: street
+            type: string
+            required: true
+            example: "123 Main St"
+          - name: city
+            type: string
+            max_length: 100
+            required: true
+          - name: country
+            type: string
+            max_length: 100
+            required: true
+          - name: postal_code
+            type: string
+            max_length: 20
+            required: true
+          - name: is_default
+            type: boolean
+            required: false
+            default: false
+
+      response:
+        serializer: AddressOutputSerializer
+        description: Created address
+
+      status_codes:
+        - code: 201
+          description: Address created
+        - code: 400
+          description: Validation error
+        - code: 401
+          description: Unauthorized
+
+    - path: /api/v1/auth/users/me/addresses/{address_id}/
+      method: PATCH
+      auth: true
+      permission: IsAuthenticated
+      summary: Set an address as default
+
+      response:
+        serializer: AddressOutputSerializer
+        description: Updated address with is_default=true
+
+      status_codes:
+        - code: 200
+          description: Address set as default
+        - code: 401
+          description: Unauthorized
+        - code: 404
+          description: Address not found
+          exception: AddressNotFoundError
+
+    - path: /api/v1/auth/users/me/addresses/{address_id}/
+      method: DELETE
+      auth: true
+      permission: IsAuthenticated
+      summary: Delete an address
+
+      status_codes:
+        - code: 204
+          description: Address deleted
+        - code: 401
+          description: Unauthorized
+        - code: 404
+          description: Address not found
+          exception: AddressNotFoundError
+
+  business_rules:
+    - id: BR-001
+      description: Addresses are scoped to the authenticated user
+      enforcement: service
+      location: users/views.py:AddressDetailView
+      error: AddressNotFoundError
+      http_status: 404
+
+    - id: BR-002
+      description: Only one default address per user; setting a new one clears others
+      enforcement: service
+      location: users/services.py:set_default_address
+      notes: Uses select_for_update in atomic transaction
+
+    - id: BR-003
+      description: Creating a new address with is_default=true clears existing defaults
+      enforcement: service
+      location: users/services.py:create_address
+      notes: Atomically unsets all defaults before creating
+
+  exceptions:
+    - name: AddressNotFoundError
+      http_status: 404
+      message: "Address {address_id} not found."
+      inherits: DomainException
+      trigger: Address ID that does not exist or belongs to another user
+
+  authorization:
+    default: IsAuthenticated
+    overrides: []
+
+  dependencies:
+    services:
+      - name: auth
+        type: internal
+        contract: specs/auth/auth-api.spec.yaml
+
+  testing:
+    unit:
+      - scenario: "Create address with is_default clears others"
+        input: { user: user1, label: "Home", is_default: true }
+        expected: other user addresses have is_default=False
+      - scenario: "Delete non-existent address raises error"
+        input: { user: user1, address_id: 999 }
+        exception: AddressNotFoundError
+    integration:
+      - scenario: "Get profile with valid token"
+        method: GET
+        path: /api/v1/auth/users/me/
+        auth: true
+        expected_status: 200
+      - scenario: "Get profile without token"
+        method: GET
+        path: /api/v1/auth/users/me/
+        auth: false
+        expected_status: 401
+      - scenario: "Create and list addresses"
+        steps:
+          - POST /users/me/addresses/ { label: "Home", street: "..", city: "..", country: "BD", postal_code: "1205", is_default: true } → 201
+          - GET /users/me/addresses/ → 200 (address in list)
+      - scenario: "Delete non-existent address"
+        method: DELETE
+        path: /api/v1/auth/users/me/addresses/999/
+        auth: true
+        expected_status: 404
+
+  changelog:
+    - version: 1.0.0
+      date: 2026-05-28
+      author: ""
+      changes:
+        - "Initial spec (backfilled from implementation)"
