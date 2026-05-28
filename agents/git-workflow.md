@@ -1,23 +1,31 @@
-# Git Workflow — All Rules
+# Git Workflow
+
+## Current Reality
+
+Solo/small-team e-commerce project. Development on localhost with Docker Compose. One production `main` branch. Staging/QA environments will be added after first deployment.
 
 ## Branch Strategy
 
-4 protected branches (hierarchy: MAIN ← STAGING ← TEST ← DEV):
+| Branch | Environment | Current Status |
+|--------|------------|---------------|
+| `main` | Production | Active — code deployed here |
+| `staging` | Pre-production | Planned — after first deployment |
+| `test` | QA | Planned — after staging is set up |
 
-| Branch | Environment | Protection | Deployment |
-|--------|------------|------------|------------|
-| `main` | Production | Protected, 1 reviewer | App Store/Play Store |
-| `staging` | Staging/UAT | Protected, 1 reviewer | Staging flavor |
-| `test` | QA Testing | Protected, 1 reviewer | Test flavor |
-| `dev` | Dev Integration | Unprotected | Dev flavor |
+### Flow (Today)
+```
+feature/* → main (PR, reviewed and merged)
+```
 
-### Flow Rules
-- Feature/Bugfix branches always created from **main**
-- Feature → `dev`: PR or local merge
-- Feature → `test`: individual PR (QA testing)
-- Feature → `staging`: individual PR, selective (only QA-approved)
-- `staging` → `main`: PR after UAT approval
-- Sync allowed: MAIN → STAGING → TEST → DEV → feature (left-to-right only)
+### Flow (After Deployment)
+```
+feature/* → main (PR) → Docker image tagged → deploy
+```
+
+### Flow (Future — with staging)
+```
+feature/* → main → staging (UAT) → main (production)
+```
 
 ## Branch Naming
 
@@ -46,18 +54,11 @@ git checkout -b feature/<ticket-id>-<description>
 git push origin feature/<ticket-id>-<description>
 ```
 
-### 4. Create PR
-**Dev (default):**
+### 4. Create PR to main
 ```bash
-gh pr create --base dev --head feature/<ticket-id>-<description> \
+gh pr create --base main --head feature/<ticket-id>-<description> \
   --title "<type>(TICKET-ID): <description>" \
-  --body "## Description\n\nImplementation of [brief description].\n\n## Changes\n- List key changes\n\n## Testing\n- [ ] Tests pass\n\nCloses #TICKET-ID"
-```
-
-**Test (QA):**
-```bash
-gh pr create --base test --head feature/<ticket-id>-<description> \
-  --title "<type>(TICKET-ID): <description>" --body "..."
+  --body "## Description\n\nImplementation of [brief description].\n\n## Changes\n- List key changes\n\n## Testing\n- [ ] Docker compose up — app starts\n- [ ] Tests pass\n\nCloses #TICKET-ID"
 ```
 
 ### 5. Do NOT Merge
@@ -87,55 +88,45 @@ Examples:
 - `fix(PROJ-234): resolve price validation on checkout`
 - `refactor(PROJ-345): extract inventory service layer`
 
-## Agent Git Rules Summary
+## Agent Git Rules
 - **DO** create feature branch from main
 - **DO** commit with conventional format
 - **DO** push to remote
-- **DO** create a PR to the target branch
+- **DO** create a PR to main
 - **DO NOT** merge any PR
-- **DO NOT** commit directly to main/dev/test/staging
+- **DO NOT** commit directly to main
 - **DO NOT** skip the PR step
 
 ## Merge Conflict Resolution
 
 **NEVER** merge target branch into feature branch. Use temp branch from target.
-Only left-to-right sync allowed: main → staging → test → dev → feature.
 
 ```bash
 # 1. Create temp branch from target
-git checkout <target-branch>
-git pull origin <target-branch>
-git checkout -b merge-conflict-resolve/<target>/<feature-name>
+git checkout main
+git pull origin main
+git checkout -b merge-conflict-resolve/main/<feature-name>
 
 # 2. Merge feature into temp branch
 git merge feature/<ticket-id>-<description>
 # Resolve conflicts
-git add . && git commit -m "resolve: merge conflicts for <feature> into <target>"
+git add . && git commit -m "resolve: merge conflicts for <feature> into main"
 
-# 3. Push and create PR (temp → target)
-git push origin merge-conflict-resolve/<target>/<feature-name>
+# 3. Push and create PR (temp → main)
+git push origin merge-conflict-resolve/main/<feature-name>
 
 # 4. Clean up after merge
-git branch -d merge-conflict-resolve/<target>/<feature-name>
-git push origin --delete merge-conflict-resolve/<target>/<feature-name>
+git branch -d merge-conflict-resolve/main/<feature-name>
+git push origin --delete merge-conflict-resolve/main/<feature-name>
 ```
 
-## Left-to-Right Sync (Allowed)
-
+## Sync Feature Branch with main (Allowed)
 ```bash
-# Sync main → feature branch
 git checkout feature/<ticket-id>-<description>
 git merge main && git push origin feature/<ticket-id>-<description>
-
-# Sync main → staging (via temp branch + PR)
-git checkout staging && git pull origin staging
-git checkout -b merge-conflict-resolve/staging/main-sync
-git merge main
-# resolve → push → PR to staging
 ```
 
-## Hotfix Deployment
-
+## Hotfix
 ```bash
 # 1. Create from main
 git checkout main && git checkout -b hotfix/PROJ-123-description
@@ -144,9 +135,16 @@ git checkout main && git checkout -b hotfix/PROJ-123-description
 git add . && git commit -m "fix(PROJ-123): description"
 git push origin hotfix/PROJ-123-description
 # PR: hotfix → main
-
-# 3. After merge, cherry-pick to other branches
-git checkout staging && git cherry-pick <hash> && git push
-git checkout test && git cherry-pick <hash> && git push
-git checkout dev && git cherry-pick <hash> && git push
 ```
+
+## Docker Release Tags
+
+Once deployment starts, use tags to track releases:
+
+```bash
+git checkout main
+git tag -a prod-v1.0.0 -m "Production release v1.0.0"
+git push origin prod-v1.0.0
+```
+
+Tags are used by Docker Compose / CI to build and deploy specific versions.

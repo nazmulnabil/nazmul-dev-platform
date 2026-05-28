@@ -93,18 +93,32 @@ draft → approved → implemented → deprecated
 
 ---
 
-## Git Workflow (4-branch)
+## Git Workflow
 
-| Branch | Environment | Protection |
-|--------|------------|------------|
-| `main` | Production | Protected, 1 reviewer |
-| `staging` | Staging / UAT | Protected, 1 reviewer |
-| `test` | QA Testing | Protected, 1 reviewer |
-| `dev` | Developer integration | Unprotected |
+Simple and pragmatic for solo/small-team development:
 
-Feature branches are created from `main`, then promoted: `feature → dev → test → staging → main`.
+- `main` — production branch. All code deployed from here.
+- Feature branches from `main` → PR → reviewed → merged to `main`
 
-See `@agents/git-workflow.md` for full branch naming, commit format, PR conventions, and conflict resolution.
+```
+feature/* → PR → main
+```
+
+Docker release tags for deployment: `git tag prod-v1.0.0` → pushed → deployed.
+
+See `@agents/git-workflow.md` for full conventions (branch naming, commit format, PRs, conflict resolution).
+
+---
+
+## Deployment
+
+| Stage | Status | Stack |
+|-------|--------|-------|
+| Local dev | ✅ Running | Django dev server, PostgreSQL, Docker Compose |
+| Production | 🔜 Planning | Docker Compose on VPS, PostgreSQL, Gunicorn + Nginx |
+| Scale | 🔜 Future | Load balancer, multiple app nodes, managed DB |
+
+Docker Compose is the deployment unit — backend, frontend, database all defined in `docker-compose.yml`.
 
 ---
 
@@ -125,6 +139,9 @@ python manage.py runserver
 
 # Tests
 pytest
+
+# Or with Docker
+docker compose up
 ```
 
 ---
