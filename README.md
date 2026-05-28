@@ -25,7 +25,7 @@ Requirement → Spec (MD + YAML) → Agent reads spec → Agent implements → T
 
 ---
 
-## What's Implemented (backfilled as specs)
+## What's Implemented
 
 | Domain | Status | Spec | Backend | Frontend |
 |--------|--------|------|---------|----------|
