@@ -1,0 +1,113 @@
+# =============================================================================
+# Categories API Spec (Service/Selector Layer)
+# =============================================================================
+spec:
+  name: catalog-categories
+  domain: catalog
+  type: api
+  version: 1.0.0
+  status: implemented
+  last_updated: 2026-05-28
+
+  description: >
+    Hierarchical product categories with parent-child relationships.
+    Only internal service/selector layer is implemented (no views yet).
+
+  scope:
+    in:
+      - Create category with optional parent
+      - List active categories (ordered by display_order)
+      - Get category by slug
+    out:
+      - Category update endpoint (use service directly)
+      - Category delete endpoint
+      - API views
+
+  entities:
+    - name: Category
+      table: catalog_category
+      description: Hierarchical product category with self-referencing parent
+      fields:
+        - name: id
+          type: integer
+          constraints: [required]
+        - name: parent
+          type: fk
+          fk_target: Category
+          nullable: true
+          on_delete: protect
+          related_name: children
+        - name: name
+          type: string
+          max_length: 255
+          constraints: [required]
+        - name: slug
+          type: string
+          format: slug
+          constraints: [required, unique]
+        - name: image
+          type: image
+          upload_to: categories/
+          required: false
+        - name: display_order
+          type: integer
+          default: 0
+        - name: is_active
+          type: boolean
+          default: true
+        - name: created_at
+          type: datetime
+          auto: now_add
+        - name: updated_at
+          type: datetime
+          auto: now
+      indexes:
+        - fields: [display_order]
+          condition: is_active=True
+          name: idx_category_active_order
+
+  endpoints: []
+
+  business_rules:
+    - id: BR-001
+      description: Category parent is protected from deletion (on_delete=PROTECT)
+      enforcement: model
+      location: catalog/models.py:Category.parent
+
+    - id: BR-002
+      description: Only active categories appear in listings
+      enforcement: selector
+      location: catalog/selectors.py:get_active_categories
+
+    - id: BR-003
+      description: Categories are ordered by display_order in listings
+      enforcement: selector
+      location: catalog/selectors.py:get_active_categories
+
+  exceptions:
+    - name: CategoryNotFoundError
+      http_status: 404
+      message: "Category '{slug}' not found."
+      inherits: DomainException
+      trigger: Lookup by slug that does not exist
+
+  authorization:
+    default: IsAuthenticated
+
+  testing:
+    unit:
+      - scenario: "Create category without parent"
+        input: { name: "Electronics", slug: "electronics" }
+        expected: Category created, parent=None
+      - scenario: "Create category with parent"
+        input: { name: "Laptops", slug: "laptops", parent_id: 1 }
+        expected: Category created, parent=Category(1)
+      - scenario: "List active categories returns ordered list"
+        expected: Categories ordered by display_order, only is_active=True
+
+  changelog:
+    - version: 1.0.0
+      date: 2026-05-28
+      author: ""
+      changes:
+        - "Initial spec (backfilled from implementation)"
