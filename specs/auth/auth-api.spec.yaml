@@ -1,0 +1,347 @@
+# =============================================================================
+# Auth API Spec — Authentication & Token Management
+# =============================================================================
+spec:
+  name: auth-authentication
+  domain: auth
+  type: api
+  version: 1.0.0
+  status: implemented
+  last_updated: 2026-05-28
+
+  description: >
+    User registration, login, and JWT token management.
+    Users authenticate via email/password and receive JWT access + refresh tokens.
+
+  scope:
+    in:
+      - Email/password registration
+      - Email/password login
+      - JWT access token (60 min) and refresh token (1 day)
+      - Custom JWT claims (email, is_staff)
+    out:
+      - Social login (Google, Facebook, etc.)
+      - OAuth2 flows
+      - Password reset flow
+      - Email verification
+
+  entities:
+    - name: User
+      table: users_user
+      description: Custom user model with email as username field
+      fields:
+        - name: id
+          type: integer
+          constraints: [required]
+          notes: Auto-generated primary key
+        - name: email
+          type: string
+          format: email
+          constraints: [required, unique]
+          normalization: lowercase
+          notes: Used as USERNAME_FIELD for authentication
+        - name: username
+          type: string
+          max_length: 150
+          constraints: [required, unique]
+        - name: password
+          type: string
+          write_only: true
+          constraints: [min_length: 8]
+        - name: phone
+          type: string
+          max_length: 20
+          required: false
+          nullable: true
+        - name: profile_picture
+          type: image
+          upload_to: avatars/
+          required: false
+          nullable: true
+        - name: is_staff
+          type: boolean
+          default: false
+        - name: created_at
+          type: datetime
+          auto: now_add
+        - name: updated_at
+          type: datetime
+          auto: now
+      relationships: []
+
+  endpoints:
+    - path: /api/v1/auth/register/
+      method: POST
+      auth: false
+      permission: AllowAny
+      summary: Register a new user account
+
+      request:
+        serializer: UserRegistrationInputSerializer
+        content_type: application/json
+        description: User registration details
+        fields:
+          - name: email
+            type: string
+            format: email
+            required: true
+            constraints:
+              - max_length: 254
+            example: "user@example.com"
+          - name: username
+            type: string
+            required: true
+            constraints:
+              - max_length: 150
+            example: "johndoe"
+          - name: password
+            type: string
+            required: true
+            constraints:
+              - min_length: 8
+            example: "securePass123"
+          - name: phone
+            type: string
+            required: false
+            constraints:
+              - max_length: 20
+            example: "+8801234567890"
+
+      response:
+        serializer: AuthResponseSerializer
+        description: Created user profile with JWT tokens
+        fields:
+          - name: user
+            type: object
+            fields:
+              - name: id
+                type: integer
+                example: 1
+              - name: email
+                type: string
+                example: "user@example.com"
+              - name: username
+                type: string
+                example: "johndoe"
+              - name: phone
+                type: string
+                example: "+8801234567890"
+              - name: profile_picture
+                type: string
+                nullable: true
+                example: null
+              - name: addresses
+                type: array
+                of:
+                  type: object
+          - name: tokens
+            type: object
+            fields:
+              - name: access
+                type: string
+                example: "eyJhbGciOiJIUzI1NiIs..."
+              - name: refresh
+                type: string
+                example: "eyJhbGciOiJIUzI1NiIs..."
+
+      status_codes:
+        - code: 201
+          description: Registration successful
+        - code: 400
+          description: Validation error (short password, missing fields, invalid email)
+        - code: 409
+          description: Email already registered
+          exception: EmailAlreadyExistsError
+
+    - path: /api/v1/auth/login/
+      method: POST
+      auth: false
+      permission: AllowAny
+      summary: Authenticate with email and password
+
+      request:
+        serializer: LoginInputSerializer
+        content_type: application/json
+        description: Login credentials
+        fields:
+          - name: email
+            type: string
+            format: email
+            required: true
+            example: "user@example.com"
+          - name: password
+            type: string
+            required: true
+            example: "securePass123"
+
+      response:
+        serializer: AuthResponseSerializer
+        description: Authenticated user profile with JWT tokens
+        fields:
+          - name: user
+            type: object
+            fields:
+              - name: id
+                type: integer
+              - name: email
+                type: string
+              - name: username
+                type: string
+              - name: phone
+                type: string
+              - name: profile_picture
+                type: string
+                nullable: true
+              - name: addresses
+                type: array
+          - name: tokens
+            type: object
+            fields:
+              - name: access
+                type: string
+              - name: refresh
+                type: string
+
+      status_codes:
+        - code: 200
+          description: Login successful
+        - code: 400
+          description: Validation error (missing fields)
+        - code: 401
+          description: Invalid email or password
+          exception: InvalidCredentialsError
+
+    - path: /api/v1/auth/token/refresh/
+      method: POST
+      auth: false
+      permission: AllowAny
+      summary: Refresh an expired access token using a valid refresh token
+
+      request:
+        serializer: null
+        content_type: application/json
+        description: Refresh token
+        fields:
+          - name: refresh
+            type: string
+            required: true
+            example: "eyJhbGciOiJIUzI1NiIs..."
+
+      response:
+        serializer: null
+        description: New access token
+        fields:
+          - name: access
+            type: string
+            example: "eyJhbGciOiJIUzI1NiIs..."
+
+      status_codes:
+        - code: 200
+          description: Token refreshed successfully
+        - code: 401
+          description: Invalid or expired refresh token
+
+  business_rules:
+    - id: BR-001
+      description: Email must be unique across all users
+      enforcement: service
+      location: users/services.py:register_user
+      error: EmailAlreadyExistsError
+      http_status: 409
+
+    - id: BR-002
+      description: Password must pass Django built-in validators (min length, not common, not numeric-only, not too similar to user attributes)
+      enforcement: serializer
+      location: Django AuthPasswordValidators
+      error: ValidationError
+      http_status: 400
+
+    - id: BR-003
+      description: Email is normalized to lowercase before storage
+      enforcement: serializer
+      location: users/serializers.py:UserRegistrationInputSerializer.validate_email
+
+    - id: BR-004
+      description: Login requires matching email and password via Django authenticate()
+      enforcement: service
+      location: users/services.py:authenticate_user
+      error: InvalidCredentialsError
+      http_status: 401
+
+  exceptions:
+    - name: EmailAlreadyExistsError
+      http_status: 409
+      message: "Email {email} is already registered."
+      inherits: DomainException
+      trigger: Duplicate email on registration
+    - name: InvalidCredentialsError
+      http_status: 401
+      message: "Invalid email or password."
+      inherits: DomainException
+      trigger: Login with wrong email or password
+
+  authorization:
+    default: IsAuthenticated
+    overrides:
+      - endpoint: POST /api/v1/auth/register/
+        permission: AllowAny
+      - endpoint: POST /api/v1/auth/login/
+        permission: AllowAny
+      - endpoint: POST /api/v1/auth/token/refresh/
+        permission: AllowAny
+
+  dependencies:
+    services:
+      - name: core
+        type: internal
+        contract: spec/core
+    libraries:
+      - name: djangorestframework-simplejwt
+        version: ">=5"
+        purpose: JWT authentication
+      - name: drf-spectacular
+        version: ">=0.27"
+        purpose: OpenAPI schema generation
+
+  testing:
+    unit:
+      - scenario: "Register user creates user with correct email"
+        input: { email: "test@example.com", username: "testuser", password: "pass1234" }
+        expected: user.email == "test@example.com"
+      - scenario: "Register with existing email raises error"
+        input: { email: "existing@example.com", ... }
+        exception: EmailAlreadyExistsError
+      - scenario: "Authenticate with correct credentials returns user"
+        input: { email: "test@example.com", password: "correctpass" }
+        expected: user is not None
+      - scenario: "Authenticate with wrong password raises error"
+        input: { email: "test@example.com", password: "wrongpass" }
+        exception: InvalidCredentialsError
+    integration:
+      - scenario: "Register → Login → Refresh flow"
+        steps:
+          - POST /register/ { email, username, password } → 201
+          - POST /login/ { email, password } → 200
+          - POST /token/refresh/ { refresh } → 200
+      - scenario: "Register duplicate email"
+        method: POST
+        path: /api/v1/auth/register/
+        body: { email: "dup@example.com", username: "u1", password: "pass1234" }
+        expected_status: 201
+        then:
+          method: POST
+          path: /api/v1/auth/register/
+          body: { email: "dup@example.com", username: "u2", password: "pass1234" }
+          expected_status: 409
+      - scenario: "Login with wrong password"
+        method: POST
+        path: /api/v1/auth/login/
+        body: { email: "test@example.com", password: "wrong" }
+        expected_status: 401
+
+  changelog:
+    - version: 1.0.0
+      date: 2026-05-28
+      author: ""
+      changes:
+        - "Initial spec (backfilled from implementation)"
