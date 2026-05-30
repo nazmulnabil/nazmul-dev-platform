@@ -1,16 +1,28 @@
 # User Personas
 
-## Persona Template
+### Buyer — Sarah
 
-### [Name] — [Role]
+- **Demographics**: 28, urban professional, moderate tech literacy
+- **Goals**: Browse products, compare prices, purchase quickly
+- **Pain Points**: Complicated checkout, slow page loads, unclear shipping costs
+- **Needs**: Fast search, clear product details, simple checkout
+- **Frequency**: Weekly
+- **Success Looks Like**: Finds what she needs in under 2 minutes, checks out in 3 clicks
 
-- **Demographics**: [age, location, tech literacy]
-- **Goals**: [what they want to achieve]
-- **Pain Points**: [frustrations with current process]
-- **Needs**: [what the product must provide]
-- **Frequency**: [how often they'll use the product]
-- **Success Looks Like**: [what a great experience means to them]
+### Seller — Raj
 
----
+- **Demographics**: 35, small business owner, comfortable with basic software
+- **Goals**: List products, track inventory, manage orders
+- **Pain Points**: Complex product setup, confusing inventory management
+- **Needs**: Simple product creation, bulk import, real-time stock tracking
+- **Frequency**: Daily
+- **Success Looks Like**: Lists a new product in 5 minutes, never oversells
 
-*Add personas below following the template above.*
+### Admin — Alex
+
+- **Demographics**: 42, platform operator, technical background
+- **Goals**: Manage users, moderate products, monitor platform health
+- **Pain Points**: Lack of visibility into platform activity, manual moderation
+- **Needs**: User management, product moderation, basic reporting
+- **Frequency**: Daily
+- **Success Looks Like**: Can approve/block users in one click, sees platform metrics at a glance

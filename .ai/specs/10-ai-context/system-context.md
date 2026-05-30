@@ -2,23 +2,37 @@
 
 ## What This Is
 
-**nazmul-dev-platform**: Enterprise e-commerce platform starter kit.
+**nazmul-dev-platform**: Enterprise-grade spec-first development starter kit with an e-commerce reference implementation.
 
-- **Backend**: Django + DRF, JWT auth, PostgreSQL
-- **Frontend**: React + Vite (scaffolded)
-- **Approach**: Spec-first development using `.ai/specs/` as source of truth
+- **Backend**: Django 5 + DRF, JWT auth, PostgreSQL — 3 apps: `authentication`, `profiles`, `catalog`
+- **Frontend**: React + Vite (scaffolded, not yet built)
+- **Approach**: Spec-first — `.ai/specs/` is the source of truth. AI-DLC rituals drive the process.
 
 ## Repo Structure
 
 ```
-.ai/specs/                    # Source of truth (this directory)
-.claude/                      # AI tool configuration
-django-ecommerce-api/         # Backend submodule
-react-ecommerce/              # Frontend submodule
+.ai/specs/                    # Source of truth
+.claude/                      # AI tool configuration (rituals, agents, skills)
+django-ecommerce-api/         # Backend submodule — 3 Django apps
+react-ecommerce/              # Frontend submodule — Vite + React scaffold
 AGENTS.md                     # Loaded every session
 CLAUDE.md                     # Non-negotiables
-README.md                     # Project overview
+GETTING_STARTED.md            # Usage scale guide
 ```
+
+## Backend Apps
+
+| Django App | Domain | Key Models | Status |
+|------------|--------|------------|--------|
+| `authentication` | Auth | User (custom, email-based) | ✅ Implemented |
+| `profiles` | Users | Address | ✅ Implemented |
+| `catalog` | Catalog | Category, Seller, Product, ProductImage, ProductVariant, VariantAttribute, AttributeKey, Warehouse, Inventory, InventoryReservation | ✅ Implemented |
+
+## Key Decisions (see `decisions/` for ADRs)
+
+- Modular monolith for Phase 1 (ADR-003)
+- JWT auth with short-lived access tokens (ADR-004)
+- Service/Selector layer pattern per app (ADR-005)
 
 ## Key Links
 
