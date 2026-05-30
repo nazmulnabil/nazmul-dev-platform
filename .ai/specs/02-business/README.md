@@ -1,16 +1,25 @@
-# 02-Business — Domain Context
+# Business — Domain Context
 
-Business logic, workflows, and domain knowledge. This section is for domain experts, PMs, and stakeholders.
+E-commerce marketplace domains.
 
-## Structure
+## Domains
 
-```
-02-business/
-  domains/<domain>/       Domain-specific business rules & workflows
-  workflows/              Cross-domain workflow definitions
-  operations/             Operational procedures
-  approvals/              Approval chains
-  reporting/              Reporting & analytics requirements
-  integrations/           Business integration requirements
-  compliance/             Regulatory & compliance requirements
-```
+| Domain | Description | Spec Location |
+|--------|-------------|---------------|
+| **Auth** | Registration, login, JWT token management | `modules/auth/` |
+| **Users** | User profiles, address management | `modules/users/` |
+| **Catalog** | Categories, products, variants, inventory | `modules/catalog/` |
+| **Cart** | Shopping cart (planned Phase 2) | Not yet created |
+| **Orders** | Order lifecycle (planned Phase 2) | Not yet created |
+
+## Cross-Domain Workflows
+
+| Workflow | Domains Involved | Status |
+|----------|-----------------|--------|
+| User registration → profile creation | Auth → Users | ✅ Implemented |
+| Product listing → inventory tracking | Catalog (products + inventory) | ✅ Implemented |
+| Browse → add to cart → checkout | Catalog → Cart → Orders | 🔜 Planned |
+
+## Business Rules
+
+Business rules per domain are documented in each module's `business/spec.md`. Cross-cutting rules in `MASTER_SPEC.md`.

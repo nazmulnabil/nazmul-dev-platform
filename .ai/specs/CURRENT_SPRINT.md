@@ -1,24 +1,24 @@
 # CURRENT_SPRINT — Active Sprint Context
 
-**Sprint**: Not started
-**Period**: TBD
-**Goal**: TBD
+**Sprint**: Bolts — not started (kit setup phase)
+**Period**: May 30, 2026+
+**Goal**: Establish starter kit structure and backfill specs
 
 ## Active Stories
 
 | ID | Module | Status | Priority |
 |----|--------|--------|----------|
-| — | — | — | — |
+| — | Kit setup | ✅ Backfilled | High |
 
 ## In Progress
 
-Nothing yet.
+Populating `.ai/specs/` with real project content (product, decisions, ai-context).
 
 ## Blocked
 
-Nothing yet.
+Nothing.
 
 ## Next Up
 
-1. Define project product vision in `01-product/`
-2. Populate backlog with initial feature set
+1. Start first real feature iteration (cart or orders)
+2. Implement remaining Phase 1 modules

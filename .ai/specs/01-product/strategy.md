@@ -2,24 +2,26 @@
 
 ## Target Market
 
-- Market segment
-- Geographic focus
-- Customer profile
+- **Primary**: Small-to-medium e-commerce businesses seeking a customizable, API-first marketplace
+- **Secondary**: Developers and teams who want a spec-first, AI-native reference platform to learn from
+- **Geographic**: Global, English-first with i18n-ready architecture
 
 ## Competitive Landscape
 
-| Competitor | Strengths | Weaknesses | Our Advantage |
-|------------|-----------|------------|---------------|
-| — | — | — | — |
+| Competitor | Weakness | Our Advantage |
+|------------|----------|---------------|
+| Shopify | Proprietary, limited customization, high transaction fees | Open source, fully customizable, spec-transparent |
+| WooCommerce | Plugin hell, PHP legacy, security surface | Modern Django + DRF, clean API, type-safe |
+| Medusa.js | Headless-only, requires separate frontend hosting | Monolithic option for Phase 1, modular split later |
 
 ## Go-to-Market
 
-- Launch timeline
-- Distribution channels
-- Pricing model
+- **Phase 1**: Open-source reference implementation — developer audience
+- **Phase 2**: Self-hosted marketplace package with Docker Compose
+- **Phase 3**: Managed cloud offering (optional)
 
 ## Growth Strategy
 
-- Phase 1: [foundation]
-- Phase 2: [expansion]
-- Phase 3: [scale]
+- Phase 1: Foundation — auth, users, catalog (current)
+- Phase 2: Transactions — cart, checkout, orders, payments
+- Phase 3: Scale — multi-vendor, marketplace mechanics, analytics

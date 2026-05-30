@@ -1,10 +1,20 @@
-Roadmap will be defined here once the product vision is established.
+# Roadmap
 
 ## Phases
 
 | Phase | Focus | Status |
 |-------|-------|--------|
-| Phase 1 | Foundation (auth, users, catalog) | ✅ Backfilled |
-| Phase 2 | Cart, checkout, orders | 🔜 Planned |
-| Phase 3 | Payments, shipping, notifications | 🔜 Future |
-| Phase 4 | Admin dashboard, analytics | 🔜 Future |
+| **Kit Setup** | Starter kit structure, specs backfilled, product defined | ✅ Complete |
+| **Phase 1** | Auth, users, catalog (backend implemented, specs backfilled) | ✅ Backfilled |
+| **Phase 2** | Cart, checkout, orders, payments | 🔜 Planned |
+| **Phase 3** | Multi-vendor marketplace, seller dashboard | 🔜 Future |
+| **Phase 4** | Admin dashboard, analytics, advanced search | 🔜 Future |
+
+## Milestones
+
+| Milestone | Target | Status |
+|-----------|--------|--------|
+| Starter kit structure finalized | May 30, 2026 | ✅ |
+| Core backend API (auth/users/catalog) | Complete | ✅ Backfilled |
+| Cart + checkout | Phase 2 | 🔜 |
+| Frontend implementation | TBD | 📋 |
