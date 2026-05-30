@@ -1,0 +1,250 @@
+# =============================================================================
+# Inventory API Spec (Service/Selector Layer)
+# =============================================================================
+spec:
+  name: catalog-inventory
+  domain: catalog
+  type: api
+  version: 1.0.0
+  status: implemented
+  last_updated: 2026-05-28
+
+  description: >
+    Multi-warehouse inventory tracking with reservation lifecycle.
+    Supports initialise, reconcile, reserve, release, and confirm operations.
+    All inventory mutations use pessimistic locking (select_for_update).
+
+  scope:
+    in:
+      - Create warehouse
+      - Initialise inventory for variant+warehouse (one-shot)
+      - Reconcile (adjust) inventory quantity
+      - Reserve inventory (idempotent via idempotency_key)
+      - Release reservation (ACTIVE → RELEASED)
+      - Confirm reservation (ACTIVE → CONFIRMED, deducts from quantity)
+      - Query inventory by variant
+    out:
+      - Inventory transfer between warehouses
+      - Low-stock alerts
+      - Bulk operations
+      - API views
+
+  entities:
+    - name: Warehouse
+      table: catalog_warehouse
+      description: Physical warehouse or storage location
+      fields:
+        - name: id
+          type: integer
+        - name: name
+          type: string
+          max_length: 255
+          constraints: [required]
+        - name: address
+          type: string
+          constraints: [required]
+        - name: city
+          type: string
+          max_length: 100
+          constraints: [required]
+        - name: country
+          type: string
+          max_length: 100
+          constraints: [required]
+        - name: is_active
+          type: boolean
+          default: true
+
+    - name: Inventory
+      table: catalog_inventory
+      description: Stock record for a variant at a specific warehouse
+      fields:
+        - name: id
+          type: integer
+        - name: variant
+          type: fk
+          fk_target: ProductVariant
+          on_delete: cascade
+          related_name: inventory_records
+        - name: warehouse
+          type: fk
+          fk_target: Warehouse
+          on_delete: protect
+          related_name: inventory_records
+        - name: quantity
+          type: integer
+          constraints:
+            - min_value: 0
+          default: 0
+        - name: reserved
+          type: integer
+          constraints:
+            - min_value: 0
+          default: 0
+        - name: available
+          type: property
+          description: "quantity - reserved (computed)"
+      constraints:
+        - type: unique
+          fields: [variant, warehouse]
+          name: unique_inventory_per_location
+        - type: check
+          condition: quantity >= reserved
+          name: inventory_reserved_lte_quantity
+      indexes:
+        - fields: [variant]
+        - fields: [warehouse]
+
+    - name: InventoryReservation
+      table: catalog_inventoryreservation
+      description: Reservation lifecycle for inventory
+      fields:
+        - name: id
+          type: integer
+        - name: inventory
+          type: fk
+          fk_target: Inventory
+          on_delete: protect
+          related_name: reservations
+        - name: idempotency_key
+          type: string
+          max_length: 255
+          constraints: [required, unique]
+        - name: quantity
+          type: integer
+          constraints:
+            - required
+            - min_value: 1
+        - name: status
+          type: string
+          enum: [active, released, confirmed]
+          default: active
+          max_length: 20
+      indexes:
+        - fields: [inventory, status]
+
+  state_machine:
+    entity: InventoryReservation
+    states:
+      - active
+      - released
+      - confirmed
+    transitions:
+      - from: active
+        to: released
+        trigger: release_reservation
+        description: Releases reserved stock back to available
+      - from: active
+        to: confirmed
+        trigger: confirm_reservation
+        description: Deducts from quantity, finalises the reservation
+    invalid_transitions:
+      - released → any
+      - confirmed → any
+
+  endpoints: []
+
+  business_rules:
+    - id: BR-001
+      description: Each variant+warehouse pair can have only one inventory record
+      enforcement: model constraint (unique_inventory_per_location)
+      location: catalog/models.py:Inventory
+      error: InvalidInventoryOperationError
+      http_status: 409
+
+    - id: BR-002
+      description: Inventory quantity can never be less than reserved
+      enforcement: model check constraint
+      location: catalog/models.py:Inventory (inventory_reserved_lte_quantity)
+
+    - id: BR-003
+      description: Reserve inventory is idempotent — same idempotency_key returns existing reservation
+      enforcement: service
+      location: catalog/services.py:reserve_inventory
+
+    - id: BR-004
+      description: Cannot reserve more than available quantity
+      enforcement: service
+      location: catalog/services.py:reserve_inventory
+      error: InsufficientStockError
+      http_status: 409
+
+    - id: BR-005
+      description: Only ACTIVE reservations can be released
+      enforcement: service
+      location: catalog/services.py:release_reservation
+      error: InvalidInventoryOperationError
+      http_status: 409
+
+    - id: BR-006
+      description: Only ACTIVE reservations can be confirmed
+      enforcement: service
+      location: catalog/services.py:confirm_reservation
+      error: InvalidInventoryOperationError
+      http_status: 409
+
+    - id: BR-007
+      description: Confirm reservation deducts from both quantity and reserved
+      enforcement: service
+      location: catalog/services.py:confirm_reservation
+
+    - id: BR-008
+      description: All inventory mutations use select_for_update (pessimistic locking)
+      enforcement: service
+      location: catalog/services.py:_get_locked_inventory
+
+    - id: BR-009
+      description: Reconcile cannot set quantity below current reserved count
+      enforcement: service
+      location: catalog/services.py:reconcile_inventory
+      error: InvalidInventoryOperationError
+      http_status: 409
+
+  exceptions:
+    - name: InventoryNotFoundError
+      http_status: 404
+      message: "No inventory for '{variant.sku}' in '{warehouse.name}'."
+      inherits: DomainException
+    - name: InsufficientStockError
+      http_status: 409
+      message: "Only {available} units available for '{variant.sku}'."
+      inherits: DomainException
+    - name: InvalidInventoryOperationError
+      http_status: 409
+      message: Various messages based on context
+      inherits: DomainException
+    - name: NegativeInventoryError
+      http_status: 409
+      message: "Cannot confirm {quantity} — only {quantity} in stock."
+      inherits: DomainException
+
+  authorization:
+    default: IsAuthenticated
+
+  testing:
+    unit:
+      - scenario: "Initialise inventory creates record"
+        input: { variant: v, warehouse: w, quantity: 100 }
+        expected: Inventory(quantity=100, reserved=0)
+      - scenario: "Reserve inventory reduces available"
+        input: { variant: v, warehouse: w, quantity: 10, idempotency_key: "order-1" }
+        expected: reserved=10, available=original-10
+      - scenario: "Reserve same key twice is idempotent"
+        input: Same idempotency_key twice
+        expected: Same reservation returned, no double-deduction
+      - scenario: "Release reservation restores available"
+        expected: ACTIVE → RELEASED, reserved decremented
+      - scenario: "Confirm reservation deducts quantity"
+        expected: ACTIVE → CONFIRMED, quantity and reserved decremented
+      - scenario: "Cannot reserve more than available"
+        input: quantity > available
+        exception: InsufficientStockError
+      - scenario: "Cannot release confirmed reservation"
+        exception: InvalidInventoryOperationError
+
+  changelog:
+    - version: 1.0.0
+      date: 2026-05-28
+      author: ""
+      changes:
+        - "Initial spec (backfilled from implementation)"

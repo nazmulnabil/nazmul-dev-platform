@@ -47,3 +47,11 @@ This file defines rules that apply across all modules.
 - Business specs use plain language (readable by non-engineers)
 - Technical specs use precise schemas (readable by AI agents)
 - Module specs are presence-based — only create files for platforms that exist
+
+## Multi-Platform Structure
+
+- API contracts are the single source of truth (`03-technical/contracts/rest/`)
+- Backend implements contracts (`04-modules/<domain>/backend/`)
+- Frontend and Mobile consume contracts (`04-modules/<domain>/frontend/`, `mobile/`)
+- Module specs are presence-based — only create platform folders that exist
+- All platforms reference the same contract file — no drift

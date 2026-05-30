@@ -1,0 +1,66 @@
+# =============================================================================
+# [Domain] API Contract — Shared Across All Platforms
+# =============================================================================
+# This is the single source of truth for the API contract.
+# Backend implements it. Frontend and Mobile consume it.
+# =============================================================================
+
+openapi: "3.0.3"
+info:
+  title: "[Domain] API"
+  version: "1.0.0"
+
+paths:
+  /api/v1/[domain]/[resource]/:
+    get:
+      summary: "List [resources]"
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: page_size
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        "200":
+          description: "Paginated list"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaginatedResponse"
+    post:
+      summary: "Create [resource]"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/[Resource]Input"
+      responses:
+        "201":
+          description: "Created"
+        "400":
+          description: "Validation error"
+
+components:
+  schemas:
+    [Resource]:
+      type: object
+      properties:
+        id: { type: integer }
+    [Resource]Input:
+      type: object
+      properties:
+        name: { type: string }
+
+    PaginatedResponse:
+      type: object
+      properties:
+        count: { type: integer }
+        results: { type: array, items: { $ref: "#/components/schemas/[Resource]" } }
+
+  responses:
+    Unauthorized:
+      description: "Authentication required"
+    NotFound:
+      description: "Resource not found"
