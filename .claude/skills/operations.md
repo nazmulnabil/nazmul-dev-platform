@@ -17,3 +17,4 @@
 | 2026-05-27 | Dual format (MD + YAML) | MD for human readability, YAML for agent parsing |
 | 2026-05-27 | Domain-based spec directories | Groups API + UI specs for same feature together |
 | 2026-05-27 | Backfill existing features as `implemented` status | Document what exists before building new features |
+| 2026-05-29 | Enterprise `.ai/specs/` structure | Reusable starter pack with numbered sections for scale |

@@ -26,13 +26,13 @@
 ## Project Structure
 
 ```
-specs/                        # Source of truth
+.ai/specs/                        # Source of truth
   <domain>/
-    README.md                 # Human-readable spec (Markdown)
-    <feature>.spec.yaml       # Agent-parsable spec (YAML)
-    <feature>-api.spec.yaml   # Backend API spec
-    <feature>-ui.spec.yaml    # Frontend UI spec
-agents/                       # Agent configurations
-django-ecommerce-api/         # Backend submodule
-react-ecommerce/              # Frontend submodule
+    business/spec.md              # Human-readable spec (Markdown)
+    technical/spec.md             # Agent-parsable spec (YAML/MD)
+  <domain>-api.spec.yaml          # Backend API spec
+  <domain>-ui.spec.yaml           # Frontend UI spec
+.claude/                          # AI tool config
+django-ecommerce-api/             # Backend submodule
+react-ecommerce/                  # Frontend submodule
 ```
