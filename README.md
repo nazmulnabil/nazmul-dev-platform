@@ -1,152 +1,45 @@
 # nazmul-dev-platform
 
-**Spec-first e-commerce platform.** Backend API built with Django + DRF, frontend in React. All features start as specs — the single source of truth that both agents and humans read, implement against, and validate.
+Enterprise-grade spec-driven development starter kit. Portable framework for AI-driven teams.
 
----
-
-## Why This Repo Exists
-
-This is not just another codebase. It's an **AI-augmented development platform** organized so that:
-
-- **AI agents** understand the full context before writing a single line of code
-- **Humans** review specs before implementation begins, catching design issues early
-- **Specs stay fresh** — when code changes, the spec must change first
-- **New contributors** (human or AI) get up to speed by reading specs, not digging through code
-
----
-
-## The Flow
+## Structure
 
 ```
-Requirement → Spec (MD + YAML) → Agent reads spec → Agent implements → Tests validate → PR reviewed → Merged
-                ↑                                                                         │
-                └───────────────────── Update spec if behavior changes ←──────────────────┘
+.ai/specs/                       # Source of truth
+  01-product/                    # Vision, strategy, scope, personas
+  02-business/                   # Domain logic, workflows, business rules
+  03-technical/                  # Architecture, ADRs, contracts, deployment
+  04-modules/                    # Feature specs (business + technical per module)
+  05-backlog/                    # Epics, stories, tasks
+  06-sprints/                    # Sprint plans & reports
+  07-development/                # Setup guides, coding standards
+  08-design-system/              # UI/UX specs
+  09-quality/                    # Test strategy & scenarios
+  10-ai-context/                 # AI system, product & coding context
+  11-operations/                 # Runbooks, monitoring, DR
+  12-change-requests/            # Change management
+  13-history/                    # Decision log, archives
+  14-assets/                     # Diagrams, images, templates
+.claude/                         # AI tool config (skills, agents, commands, hooks)
+django-ecommerce-api/            # Backend submodule (Django + DRF)
+react-ecommerce/                 # Frontend submodule (React + Vite)
 ```
 
----
+## How to Use This Kit
 
-## What's Implemented
+1. **Copy** `.ai/` and `.claude/` to any new project
+2. **Fill** `01-product/` with your product context
+3. **Let AI** generate specs in `04-modules/` and implement from them
+4. **Scale** from 1 to 100+ people by filling more sections as needed
 
-| Domain | Status | Spec | Backend | Frontend |
-|--------|--------|------|---------|----------|
-| Auth (register, login, JWT) | ✅ Built | `specs/auth/` | `users/` app | — |
-| User profiles & addresses | ✅ Built | `specs/users/` | `users/` app | — |
-| Catalog (categories, products, variants) | ✅ Service layer | `specs/catalog/` | `catalog/` app | — |
-| Inventory (warehouse, reservations) | ✅ Service layer | `specs/catalog/` | `catalog/` app | — |
+## Repos
 
----
+| Repo | URL | Branch |
+|------|-----|--------|
+| Context | `github.com/nazmulnabil/nazmul-dev-platform` | main |
+| Backend | `github.com/nazmulnabil/django-ecommerce-api` | main |
+| Frontend | `github.com/nazmulnabil/react-ecommerce` | main |
 
-## Repository Structure
+## Principle
 
-```
-├── AGENTS.md                         # Entry point for opencode (auto-loaded)
-├── CLAUDE.md                         # Entry point for Claude Code (auto-loaded)
-├── specs/                            # 🎯 Source of truth — every feature starts here
-│   ├── spec-template.md              #     Human-readable Markdown template
-│   ├── spec-template-api.yaml        #     Backend API YAML template (agent-parsable)
-│   ├── spec-template-ui.yaml         #     Frontend UI YAML template (agent-parsable)
-│   ├── auth/                         #     Auth domain: register, login, JWT
-│   ├── users/                        #     Users domain: profiles, addresses
-│   └── catalog/                      #     Catalog domain: products, inventory
-│
-├── agents/                           # 🧠 Agent instruction files
-│   ├── AGENTS.md                     #     Project memory & decision log
-│   ├── git-workflow.md               #     Branch strategy, commits, PRs, conflicts
-│   ├── architecture.md               #     Backend patterns & conventions
-│   ├── spec-conventions.md           #     Spec format rules & versioning
-│   ├── operations.md                 #     Test/lint commands & decisions log
-│   ├── spec-writer.md                #     Agent: how to write a spec
-│   └── implementer.md                #     Agent: how to implement from a spec
-│
-├── django-ecommerce-api/             # 📦 Backend (git submodule)
-├── react-ecommerce/                  # 📦 Frontend (git submodule, scaffolding)
-└── docs/                             # Architecture decisions (ADRs), conventions
-```
-
----
-
-## How Specs Work
-
-Each feature gets a pair of files in `specs/<domain>/`:
-
-| File | Purpose | Audience |
-|------|---------|----------|
-| `README.md` | Full human-readable spec | Developers, reviewers, stakeholders |
-| `<name>.spec.yaml` | Structured, machine-parsable contract | AI agents |
-
-### Writing a new feature spec
-
-```bash
-# 1. Write the spec
-#    specs/<domain>/README.md
-#    specs/<domain>/<name>[-api|-ui].spec.yaml
-
-# 2. Agent reads spec, implements, tests
-# 3. Reviewer validates spec matches implementation
-```
-
-### Status lifecycle
-
-```
-draft → approved → implemented → deprecated
-```
-
----
-
-## Git Workflow
-
-Simple and pragmatic for solo/small-team development:
-
-- `main` — production branch. All code deployed from here.
-- Feature branches from `main` → PR → reviewed → merged to `main`
-
-```
-feature/* → PR → main
-```
-
-Release tags for deployment: `git tag prod-v1.0.0` → pushed → deployed.
-
-See `@agents/git-workflow.md` for full conventions (branch naming, commit format, PRs, conflict resolution).
-
----
-
-## Quick Start
-
-```bash
-git clone https://github.com/nazmulnabil/nazmul-dev-platform.git
-cd nazmul-dev-platform
-git submodule update --init --recursive
-
-# Backend
-cd django-ecommerce-api
-cp .env.example .env              # configure DATABASE_URL
-python -m venv venv && source venv/bin/activate
-pip install -r requirements.txt
-python manage.py migrate
-python manage.py runserver
-
-# Tests
-pytest
-```
-
----
-
-## Key References
-
-| What | Where |
-|------|-------|
-| Agent instructions (opencode) | `AGENTS.md` |
-| Agent instructions (Claude) | `CLAUDE.md` |
-| Git rules | `@agents/git-workflow.md` |
-| Backend architecture | `@agents/architecture.md` |
-| Spec conventions | `@agents/spec-conventions.md` |
-| Test & lint commands | `@agents/operations.md` |
-
----
-
-## Design Principles
-
-1. **Spec is truth.** No spec = no implementation. Code changes = spec changes first.
-2. **Lazy-load instructions.** Agents read what they need, when they need it — not everything on every turn.
-3. **Dual format.** Humans get Markdown. Agents get YAML. Same content, different surfaces.
-4. **Backend-first, domain-driven.** Features are grouped by business domain (auth, catalog, cart, orders), not by layer.
+Specs are the source of truth. If a decision isn't in `.ai/specs/`, it doesn't exist.

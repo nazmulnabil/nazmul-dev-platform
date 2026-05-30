@@ -9,19 +9,19 @@ Your job is to write specs for features. Always follow these rules:
 
 ## Format
 
-Every feature produces two files in `specs/<domain>/`:
+Every feature produces spec files in `.ai/specs/04-modules/<domain>/`:
 
 | File | Purpose | Template |
 |------|---------|----------|
-| `README.md` | Human-readable | `specs/spec-template.md` |
-| `<feature>[-api|-ui].spec.yaml` | Agent-parsable | `specs/spec-template-api.yaml` or `specs/spec-template-ui.yaml` |
+| `business/spec.md` | Human-readable (plain language) | `.ai/specs/14-assets/templates/spec-template.md` |
+| `technical/spec.md` | Agent-parsable (engineering detail) | `.ai/specs/14-assets/templates/spec-template-api.yaml` or UI template |
 
 ## Process
 
 1. **Read the code** (for backfilling) or requirements (for new features)
-2. **Identify the domain** and create the directory: `specs/<domain>/`
-3. **Write the YAML** first — it's the structured source of truth
-4. **Write the README.md** — derived from YAML, human-friendly
+2. **Identify the domain** and create the directory: `.ai/specs/04-modules/<domain>/`
+3. **Write the technical spec** first — detailed schemas, endpoints, rules
+4. **Write the business spec** — derived from technical, plain language
 5. **Validate**:
    - Every field in the code/requirements appears in the YAML
    - Every API endpoint documented has request/response schemas
