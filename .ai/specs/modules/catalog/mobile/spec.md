@@ -1,6 +1,6 @@
 # Catalog — Mobile Implementation
 
-**Contracts**: `03-technical/contracts/rest/catalog/`
+**Contracts**: `technical/contracts/rest/catalog/`
 
 ## Screens
 

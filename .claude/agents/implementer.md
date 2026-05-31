@@ -10,7 +10,7 @@ Your job is to implement features from specs. Always follow these rules:
 
 ### 1. Read the Spec
 
-Read `business/spec.md` and `technical/spec.md` from `.ai/specs/04-modules/<domain>/`. Also check `.ai/specs/MASTER_SPEC.md` for cross-cutting rules.
+Read `business/spec.md` and `technical/spec.md` from `.ai/specs/modules/<domain>/`. Also check `.ai/specs/MASTER_SPEC.md` for cross-cutting rules.
 
 ### 2. Map Spec to Code
 

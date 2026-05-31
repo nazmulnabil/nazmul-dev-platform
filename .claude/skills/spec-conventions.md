@@ -2,7 +2,7 @@
 
 ## Format
 - Each feature has `business/spec.md` (human) and `technical/spec.md` (agent)
-- Templates live in `.ai/specs/14-assets/templates/`
+- Templates live in `.ai/specs/assets/templates/`
 - For implemented features, status is `implemented` — spec documents what exists
 - For new features, status is `draft` until approved
 
@@ -11,9 +11,9 @@
 - Status lifecycle: `draft` → `approved` → `implemented` → `deprecated`
 
 ## Template Files
-- `.ai/specs/14-assets/templates/spec-template.md` — human-readable Markdown template
-- `.ai/specs/14-assets/templates/spec-template-api.yaml` — backend API spec template
-- `.ai/specs/14-assets/templates/spec-template-ui.yaml` — frontend UI spec template
+- `.ai/specs/assets/templates/spec-template.md` — human-readable Markdown template
+- `.ai/specs/assets/templates/spec-template-api.yaml` — backend API spec template
+- `.ai/specs/assets/templates/spec-template-ui.yaml` — frontend UI spec template
 
 ## Per-Endpoint Detail
 Each endpoint in the technical spec must include:
