@@ -20,9 +20,9 @@ contracts/
 ```
 contracts/rest/auth-api.yaml
     │
-    ├── 04-modules/auth/backend/spec.yaml     ← "Implement these endpoints"
-    ├── 04-modules/auth/frontend/spec.md       ← "Call these endpoints"
-    └── 04-modules/auth/mobile/spec.md         ← "Call these endpoints"
+    ├── modules/auth/backend/spec.yaml         ← "Implement these endpoints"
+    ├── modules/auth/frontend/spec.md           ← "Call these endpoints"
+    └── modules/auth/mobile/spec.md             ← "Call these endpoints"
 ```
 
 ## Contract Format
@@ -32,4 +32,4 @@ Each contract is an OpenAPI 3.0 YAML with:
 - Status codes per endpoint
 - Common schemas in `components/schemas/`
 
-Backend specs in `04-modules/<domain>/backend/` contain additional implementation details (entities, services, exceptions) that are NOT in the contract.
+Backend specs in `modules/<domain>/backend/` contain additional implementation details (entities, services, exceptions) that are NOT in the contract.

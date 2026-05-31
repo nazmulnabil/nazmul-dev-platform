@@ -9,17 +9,17 @@ Your job is to write specs for features. Always follow these rules:
 
 ## Format
 
-Every feature produces spec files in `.ai/specs/04-modules/<domain>/`:
+Every feature produces spec files in `.ai/specs/modules/<domain>/`:
 
 | File | Purpose | Template |
 |------|---------|----------|
-| `business/spec.md` | Human-readable (plain language) | `.ai/specs/14-assets/templates/spec-template.md` |
-| `technical/spec.md` | Agent-parsable (engineering detail) | `.ai/specs/14-assets/templates/spec-template-api.yaml` or UI template |
+| `business/spec.md` | Human-readable (plain language) | `.ai/specs/assets/templates/spec-template.md` |
+| `technical/spec.md` | Agent-parsable (engineering detail) | `.ai/specs/assets/templates/spec-template-api.yaml` or UI template |
 
 ## Process
 
 1. **Read the code** (for backfilling) or requirements (for new features)
-2. **Identify the domain** and create the directory: `.ai/specs/04-modules/<domain>/`
+2. **Identify the domain** and create the directory: `.ai/specs/modules/<domain>/`
 3. **Write the technical spec** first — detailed schemas, endpoints, rules
 4. **Write the business spec** — derived from technical, plain language
 5. **Validate**:

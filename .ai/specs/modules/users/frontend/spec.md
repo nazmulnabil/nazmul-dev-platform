@@ -1,6 +1,6 @@
 # Users — Frontend Implementation
 
-**Contract**: `03-technical/contracts/rest/users-api.yaml`
+**Contract**: `technical/contracts/rest/users-api.yaml`
 
 ## Pages / Routes
 

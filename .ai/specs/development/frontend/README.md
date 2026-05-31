@@ -23,7 +23,7 @@ npm run dev
 
 ## API Contract Flow
 
-1. Read `03-technical/contracts/rest/<domain>-api.yaml` for endpoint specs
+1. Read `technical/contracts/rest/<domain>-api.yaml` for endpoint specs
 2. Create API client function in `src/api/<domain>.ts`
 3. Call from components via hooks or directly
 4. Handle all states: loading, empty, error, success
@@ -43,5 +43,5 @@ src/
 
 ## Related
 
-- Design system tokens: `08-design-system/`
-- Per-module frontend specs: `04-modules/<domain>/frontend/spec.md`
+- Design system tokens: `design-system/`
+- Per-module frontend specs: `modules/<domain>/frontend/spec.md`

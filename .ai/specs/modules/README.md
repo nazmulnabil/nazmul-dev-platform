@@ -1,4 +1,4 @@
-# 04-Modules — Feature Specifications
+# Modules — Feature Specifications
 
 Each module has two spec files:
 - **business/spec.md** — Plain language. Readable by non-engineers.
@@ -14,7 +14,7 @@ Each module has two spec files:
 
 ## Creating a New Module
 
-1. Create `04-modules/<domain>/` directory
+1. Create `modules/<domain>/` directory
 2. Write `business/spec.md` — what the feature does, in plain language
 3. Write `technical/spec.md` — entities, endpoints, rules, exceptions
 4. Reference `MASTER_SPEC.md` for cross-cutting conventions

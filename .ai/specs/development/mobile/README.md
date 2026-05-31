@@ -23,7 +23,7 @@ Mobile is not yet implemented. When it begins:
 
 ## API Contract Flow
 
-1. Read `03-technical/contracts/rest/<domain>-api.yaml` for endpoint specs
+1. Read `technical/contracts/rest/<domain>-api.yaml` for endpoint specs
 2. Create API service in `src/services/<domain>.ts`
 3. Call from screens via hooks
 4. Handle all states: loading, empty, error, success
@@ -43,5 +43,5 @@ src/
 
 ## Related
 
-- Design system tokens: `08-design-system/`
-- Per-module mobile specs: `04-modules/<domain>/mobile/spec.md`
+- Design system tokens: `design-system/`
+- Per-module mobile specs: `modules/<domain>/mobile/spec.md`

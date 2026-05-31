@@ -1,6 +1,6 @@
 # [Domain] — Mobile Implementation
 
-**Contract**: `03-technical/contracts/rest/[domain]-api.yaml`
+**Contract**: `technical/contracts/rest/[domain]-api.yaml`
 
 ## Screens / Navigation
 

@@ -1,6 +1,6 @@
 # Auth — Mobile Implementation
 
-**Contract**: `03-technical/contracts/rest/auth-api.yaml`
+**Contract**: `technical/contracts/rest/auth-api.yaml`
 
 ## Screens
 
