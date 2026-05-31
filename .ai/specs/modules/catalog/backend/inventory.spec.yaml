@@ -5,7 +5,7 @@ spec:
   name: catalog-inventory
   domain: catalog
   type: api
-  version: 1.0.0
+  version: 1.1.0
   status: implemented
   last_updated: 2026-05-28
 
@@ -13,6 +13,7 @@ spec:
     Multi-warehouse inventory tracking with reservation lifecycle.
     Supports initialise, reconcile, reserve, release, and confirm operations.
     All inventory mutations use pessimistic locking (select_for_update).
+    Service/selector layer plus REST API endpoints.
 
   scope:
     in:
@@ -27,7 +28,6 @@ spec:
       - Inventory transfer between warehouses
       - Low-stock alerts
       - Bulk operations
-      - API views
 
   entities:
     - name: Warehouse
@@ -142,7 +142,173 @@ spec:
       - released → any
       - confirmed → any
 
-  endpoints: []
+  endpoints:
+    - method: POST
+      path: /api/v1/catalog/warehouses/
+      description: Create a new warehouse
+      auth: IsAuthenticated
+      request:
+        schema:
+          type: object
+          required: [name, address, city, country]
+          properties:
+            name: { type: string, maxLength: 255 }
+            address: { type: string }
+            city: { type: string, maxLength: 100 }
+            country: { type: string, maxLength: 100 }
+      response:
+        status: 201
+        schema:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            address: { type: string }
+            city: { type: string }
+            country: { type: string }
+            is_active: { type: boolean }
+      service: catalog/services.py:create_warehouse
+
+    - method: GET
+      path: /api/v1/catalog/inventory/variants/{variant_id}/
+      description: Get inventory records for a variant across warehouses
+      auth: AllowAny
+      path_params:
+        - name: variant_id
+          type: integer
+      response:
+        status: 200
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: integer }
+              warehouse: { type: object }
+              quantity: { type: integer }
+              reserved: { type: integer }
+              available: { type: integer }
+      selector: catalog/selectors.py:get_inventory_for_variant
+
+    - method: POST
+      path: /api/v1/catalog/inventory/initialize/
+      description: Initialise inventory for a variant at a warehouse (one-shot)
+      auth: IsAuthenticated
+      request:
+        schema:
+          type: object
+          required: [variant_id, warehouse_id, quantity]
+          properties:
+            variant_id: { type: integer }
+            warehouse_id: { type: integer }
+            quantity: { type: integer, minimum: 0 }
+      response:
+        status: 201
+        schema:
+          type: object
+          properties:
+            id: { type: integer }
+            variant: { type: object }
+            warehouse: { type: object }
+            quantity: { type: integer }
+            reserved: { type: integer }
+            available: { type: integer }
+      exceptions:
+        - InventoryNotFoundError → 404
+        - InvalidInventoryOperationError → 409
+      service: catalog/services.py:initialise_inventory
+
+    - method: POST
+      path: /api/v1/catalog/inventory/reconcile/
+      description: Reconcile (adjust) inventory quantity for a variant at a warehouse
+      auth: IsAuthenticated
+      request:
+        schema:
+          type: object
+          required: [variant_id, warehouse_id, quantity]
+          properties:
+            variant_id: { type: integer }
+            warehouse_id: { type: integer }
+            quantity: { type: integer, minimum: 0 }
+      response:
+        status: 200
+        schema:
+          type: object
+          properties:
+            id: { type: integer }
+            quantity: { type: integer }
+            reserved: { type: integer }
+            available: { type: integer }
+      exceptions:
+        - InventoryNotFoundError → 404
+        - InvalidInventoryOperationError → 409
+      service: catalog/services.py:reconcile_inventory
+
+    - method: POST
+      path: /api/v1/catalog/inventory/reserve/
+      description: Reserve inventory (idempotent via idempotency_key)
+      auth: IsAuthenticated
+      request:
+        schema:
+          type: object
+          required: [variant_id, warehouse_id, quantity, idempotency_key]
+          properties:
+            variant_id: { type: integer }
+            warehouse_id: { type: integer }
+            quantity: { type: integer, minimum: 1 }
+            idempotency_key: { type: string }
+      response:
+        status: 201
+        schema:
+          type: object
+          properties:
+            id: { type: integer }
+            idempotency_key: { type: string }
+            quantity: { type: integer }
+            status: { type: string, enum: [active, released, confirmed] }
+      exceptions:
+        - InventoryNotFoundError → 404
+        - InsufficientStockError → 409
+      service: catalog/services.py:reserve_inventory
+
+    - method: POST
+      path: /api/v1/catalog/inventory/reservations/{reservation_id}/release/
+      description: Release an active reservation (ACTIVE → RELEASED)
+      auth: IsAuthenticated
+      path_params:
+        - name: reservation_id
+          type: integer
+      response:
+        status: 200
+        schema:
+          type: object
+          properties:
+            id: { type: integer }
+            status: { type: string }
+      exceptions:
+        - InventoryNotFoundError → 404
+        - InvalidInventoryOperationError → 409
+      service: catalog/services.py:release_reservation
+
+    - method: POST
+      path: /api/v1/catalog/inventory/reservations/{reservation_id}/confirm/
+      description: Confirm an active reservation (ACTIVE → CONFIRMED, deducts stock)
+      auth: IsAuthenticated
+      path_params:
+        - name: reservation_id
+          type: integer
+      response:
+        status: 200
+        schema:
+          type: object
+          properties:
+            id: { type: integer }
+            status: { type: string }
+      exceptions:
+        - InventoryNotFoundError → 404
+        - InvalidInventoryOperationError → 409
+        - NegativeInventoryError → 409
+      service: catalog/services.py:confirm_reservation
 
   business_rules:
     - id: BR-001
@@ -241,6 +407,43 @@ spec:
         exception: InsufficientStockError
       - scenario: "Cannot release confirmed reservation"
         exception: InvalidInventoryOperationError
+    api:
+      - scenario: "Create warehouse returns 201"
+        method: POST
+        path: /api/v1/catalog/warehouses/
+        input: { name: "Main Warehouse", address: "123 St", city: "Dhaka", country: "Bangladesh" }
+        expected: 201
+      - scenario: "Get inventory for variant returns list"
+        method: GET
+        path: /api/v1/catalog/inventory/variants/{variant_id}/
+        expected: 200 with list
+      - scenario: "Initialise inventory returns 201"
+        method: POST
+        path: /api/v1/catalog/inventory/initialize/
+        input: { variant_id: 1, warehouse_id: 1, quantity: 100 }
+        expected: 201
+      - scenario: "Reserve inventory returns 201"
+        method: POST
+        path: /api/v1/catalog/inventory/reserve/
+        input: { variant_id: 1, warehouse_id: 1, quantity: 5, idempotency_key: "key-1" }
+        expected: 201
+      - scenario: "Reserve insufficient stock returns 409"
+        method: POST
+        path: /api/v1/catalog/inventory/reserve/
+        input: { variant_id: 1, warehouse_id: 1, quantity: 999, idempotency_key: "key-2" }
+        expected: 409
+      - scenario: "Release reservation returns 200"
+        method: POST
+        path: /api/v1/catalog/inventory/reservations/{id}/release/
+        expected: 200
+      - scenario: "Confirm reservation returns 200"
+        method: POST
+        path: /api/v1/catalog/inventory/reservations/{id}/confirm/
+        expected: 200
+      - scenario: "Release confirmed reservation returns 409"
+        method: POST
+        path: /api/v1/catalog/inventory/reservations/{id}/release/
+        expected: 409
 
   changelog:
     - version: 1.0.0
@@ -248,3 +451,9 @@ spec:
       author: ""
       changes:
         - "Initial spec (backfilled from implementation)"
+    - version: 1.1.0
+      date: 2026-05-31
+      author: "nazmulnabil"
+      changes:
+        - "Added REST API endpoints (warehouses, inventory, reservations)"
+        - "Added API test scenarios"

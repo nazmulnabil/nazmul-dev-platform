@@ -5,23 +5,22 @@ spec:
   name: catalog-categories
   domain: catalog
   type: api
-  version: 1.0.0
+  version: 1.1.0
   status: implemented
   last_updated: 2026-05-28
 
   description: >
     Hierarchical product categories with parent-child relationships.
-    Only internal service/selector layer is implemented (no views yet).
+    Service/selector layer plus REST API endpoints.
 
   scope:
     in:
-      - Create category with optional parent
       - List active categories (ordered by display_order)
       - Get category by slug
+      - Create category with optional parent (authenticated)
     out:
       - Category update endpoint (use service directly)
       - Category delete endpoint
-      - API views
 
   entities:
     - name: Category
@@ -66,7 +65,59 @@ spec:
           condition: is_active=True
           name: idx_category_active_order
 
-  endpoints: []
+  endpoints:
+    - method: GET
+      path: /api/v1/catalog/categories/
+      description: List active categories ordered by display_order
+      auth: AllowAny
+      response:
+        status: 200
+        schema:
+          type: object
+          properties:
+            count: { type: integer }
+            next: { type: string, nullable: true }
+            previous: { type: string, nullable: true }
+            results:
+              type: array
+              items:
+                $ref: '#/entities/Category'
+      selector: catalog/selectors.py:get_active_categories
+
+    - method: GET
+      path: /api/v1/catalog/categories/{slug}/
+      description: Get a single active category by slug
+      auth: AllowAny
+      path_params:
+        - name: slug
+          type: string
+      response:
+        status: 200
+        schema: '#/entities/Category'
+      exceptions:
+        - CategoryNotFoundError → 404
+      selector: catalog/selectors.py:get_category_by_slug
+
+    - method: POST
+      path: /api/v1/catalog/categories/
+      description: Create a new category (admin only)
+      auth: IsAuthenticated
+      request:
+        schema:
+          type: object
+          required: [name, slug]
+          properties:
+            name: { type: string, maxLength: 255 }
+            slug: { type: string }
+            parent_id: { type: integer, nullable: true }
+            display_order: { type: integer, default: 0 }
+            image: { type: file, required: false }
+      response:
+        status: 201
+        schema: '#/entities/Category'
+      exceptions:
+        - CategoryNotFoundError → 404 (parent not found)
+      service: catalog/services.py:create_category
 
   business_rules:
     - id: BR-001
@@ -111,3 +162,9 @@ spec:
       author: ""
       changes:
         - "Initial spec (backfilled from implementation)"
+    - version: 1.1.0
+      date: 2026-05-31
+      author: "nazmulnabil"
+      changes:
+        - "Added REST API endpoints (list, detail, create)"
+        - "Added API test scenarios"

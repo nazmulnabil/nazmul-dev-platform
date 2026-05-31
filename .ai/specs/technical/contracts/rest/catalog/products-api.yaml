@@ -5,13 +5,13 @@ spec:
   name: catalog-products
   domain: catalog
   type: api
-  version: 1.0.0
+  version: 1.1.0
   status: implemented
   last_updated: 2026-05-28
 
   description: >
     Sellers, products with variants and attribute-based deduplication.
-    Only internal service/selector layer is implemented (no views yet).
+    Service/selector layer plus REST API endpoints.
 
   scope:
     in:
@@ -28,7 +28,6 @@ spec:
       - Category update/delete
       - Product delete
       - Variant update/delete
-      - API views
 
   entities:
     - name: Seller
@@ -228,7 +227,197 @@ spec:
           fields: [variant, key]
           name: unique_attribute_per_variant
 
-  endpoints: []
+  endpoints:
+    - method: GET
+      path: /api/v1/catalog/products/
+      description: List active products with filtering
+      auth: AllowAny
+      query_params:
+        - name: category
+          type: string
+        - name: brand
+          type: string
+        - name: min_price
+          type: decimal
+        - name: max_price
+          type: decimal
+        - name: search
+          type: string
+        - name: in_stock
+          type: boolean
+          default: true
+        - name: ordering
+          type: string
+          enum: [price, -price, created_at, -created_at, name, -name]
+          default: -created_at
+        - name: page
+          type: integer
+        - name: page_size
+          type: integer
+      response:
+        status: 200
+        schema:
+          type: object
+          properties:
+            count: { type: integer }
+            next: { type: string, nullable: true }
+            previous: { type: string, nullable: true }
+            results: { type: array }
+      selector: catalog/selectors.py:get_products
+
+    - method: POST
+      path: /api/v1/catalog/products/
+      description: Create a new product (seller only)
+      auth: IsAuthenticated
+      request:
+        schema:
+          type: object
+          required: [name, description, category_id]
+          properties:
+            name: { type: string, maxLength: 500 }
+            description: { type: string }
+            category_id: { type: integer }
+            brand: { type: string, maxLength: 255 }
+      response:
+        status: 201
+        schema:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            slug: { type: string }
+      exceptions:
+        - CategoryNotFoundError → 404
+      service: catalog/services.py:create_product
+
+    - method: GET
+      path: /api/v1/catalog/products/{slug}/
+      description: Get product detail with images and variants
+      auth: AllowAny
+      path_params:
+        - name: slug
+          type: string
+      response:
+        status: 200
+        schema:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            slug: { type: string }
+            images: { type: array }
+            variants: { type: array }
+      exceptions:
+        - ProductNotFoundError → 404
+      selector: catalog/selectors.py:get_product_by_slug
+
+    - method: PATCH
+      path: /api/v1/catalog/products/{slug}/
+      description: Update product fields
+      auth: IsAuthenticated
+      path_params:
+        - name: slug
+          type: string
+      request:
+        schema:
+          type: object
+          properties:
+            name: { type: string }
+            description: { type: string }
+            brand: { type: string }
+            is_active: { type: boolean }
+            category_id: { type: integer }
+      response:
+        status: 200
+        schema:
+          type: object
+          properties:
+            id: { type: integer }
+            name: { type: string }
+            slug: { type: string }
+      exceptions:
+        - ProductNotFoundError → 404
+        - CategoryNotFoundError → 404
+      service: catalog/services.py:update_product
+
+    - method: POST
+      path: /api/v1/catalog/products/{slug}/deactivate/
+      description: Deactivate a product
+      auth: IsAuthenticated
+      path_params:
+        - name: slug
+          type: string
+      response:
+        status: 204
+      exceptions:
+        - ProductNotFoundError → 404
+      service: catalog/services.py:deactivate_product
+
+    - method: POST
+      path: /api/v1/catalog/sellers/
+      description: Create seller profile (one per user)
+      auth: IsAuthenticated
+      request:
+        schema:
+          type: object
+          required: [store_name]
+          properties:
+            store_name: { type: string, maxLength: 255 }
+      response:
+        status: 201
+        schema:
+          type: object
+          properties:
+            id: { type: integer }
+            store_name: { type: string }
+      exceptions:
+        - SellerAlreadyExistsError → 409
+      service: catalog/services.py:create_seller
+
+    - method: GET
+      path: /api/v1/catalog/sellers/{seller_id}/products/
+      description: List products by a specific seller
+      auth: AllowAny
+      path_params:
+        - name: seller_id
+          type: integer
+      response:
+        status: 200
+        schema:
+          type: object
+          properties:
+            count: { type: integer }
+            results: { type: array }
+      selector: catalog/selectors.py:get_products_by_seller
+
+    - method: POST
+      path: /api/v1/catalog/products/{slug}/variants/
+      description: Create a product variant with SKU and attributes
+      auth: IsAuthenticated
+      path_params:
+        - name: slug
+          type: string
+      request:
+        schema:
+          type: object
+          required: [sku, price]
+          properties:
+            sku: { type: string, maxLength: 100 }
+            price: { type: decimal }
+            attributes: { type: object }
+      response:
+        status: 201
+        schema:
+          type: object
+          properties:
+            id: { type: integer }
+            sku: { type: string }
+            price: { type: decimal }
+      exceptions:
+        - ProductNotFoundError → 404
+        - DuplicateSkuError → 409
+        - DuplicateVariantError → 409
+      service: catalog/services.py:create_variant
 
   business_rules:
     - id: BR-001
@@ -316,3 +505,9 @@ spec:
       author: ""
       changes:
         - "Initial spec (backfilled from implementation)"
+    - version: 1.1.0
+      date: 2026-05-31
+      author: "nazmulnabil"
+      changes:
+        - "Added REST API endpoints (list, detail, create, update, deactivate, sellers, variants)"
+        - "Added API test scenarios"
