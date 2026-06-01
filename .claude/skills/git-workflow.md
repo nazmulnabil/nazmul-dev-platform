@@ -93,9 +93,11 @@ Examples:
 - **DO** commit with conventional format
 - **DO** push to remote
 - **DO** create a PR to main
+- **DO** use author: nabilnazmul <nabilnazmul868@gmail.com>
 - **DO NOT** merge any PR
 - **DO NOT** commit directly to main
 - **DO NOT** skip the PR step
+- **DO NOT** use NKNabil1995 or brainstation-23.com email
 
 ## Merge Conflict Resolution
 
